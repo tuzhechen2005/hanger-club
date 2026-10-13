@@ -122,11 +122,11 @@ def studio(target=(0, 0, -.43), width=1.25, resolution=768):
     world.use_nodes = True
     # Scene-linear warm grey, using the requested sRGB reference background.
     world.node_tree.nodes["Background"].inputs[0].default_value = (.84, .83, .78, 1)
-    world.node_tree.nodes["Background"].inputs[1].default_value = .65
+    world.node_tree.nodes["Background"].inputs[1].default_value = .25
     scene.world = world
     for name, location, energy, size in [
-        ("Key", (-1.5, -2, 1.7), 160, 2),
-        ("Fill", (1.6, -.5, .4), 70, 1.5),
+        ("Key", (-2, -1.2, 1.3), 240, 1.4),
+        ("Fill", (1.6, -.5, .4), 60, 1.5),
         ("Rim", (0, 1.8, .8), 110, 1.5),
     ]:
         light = bpy.data.lights.new(name, "AREA")
@@ -144,7 +144,7 @@ def studio(target=(0, 0, -.43), width=1.25, resolution=768):
 
 
 def render(path, camera, azimuth=0, target=(0, 0, -.43), elevation=.08):
-    camera.location = (math.sin(azimuth) * 2, -math.cos(azimuth) * 2, target[2] + elevation)
+    camera.location = (target[0] + math.sin(azimuth) * 2, target[1] - math.cos(azimuth) * 2, target[2] + elevation)
     camera.rotation_euler = (Vector(target) - camera.location).to_track_quat("-Z", "Y").to_euler()
     bpy.context.scene.render.filepath = str(path.resolve())
     path.parent.mkdir(parents=True, exist_ok=True)

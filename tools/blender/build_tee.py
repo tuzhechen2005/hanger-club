@@ -41,18 +41,18 @@ class PatternAssembly:
         self.face_parts.append(part)
 
 
-def build_patterns(dimensions, parent, profile="baseline", drape_support=.45):
+def build_patterns(dimensions, parent, profile="baseline", drape_support=.33):
     d = dimensions
     pattern = PatternAssembly()
-    columns, rows, arm_rows = 40, 40, 14
-    neck_start, neck_end = 14, 26
+    columns, rows, arm_rows = 44, 40, 14
+    neck_start, neck_end = 12, 32
     half = d["chest_flat_m"] / 2
     hps, hem = -.084, -.084 - d["length_m"]
     neck = .105
     # All islands use the same UV/m scale. Their *allowed* regions are fixed;
     # unused margins preserve isotropic texel density rather than stretching.
     density = min(.48 / d["chest_flat_m"], .60 / d["length_m"])
-    islands = []
+    islands, stitch_paths = [], []
     body = {}
 
     def paper_x(j):
@@ -82,18 +82,38 @@ def build_patterns(dimensions, parent, profile="baseline", drape_support=.45):
                 cross = max(0., 1 - (x0 / half) ** 2) ** .5
                 arm = .038 * math.sin(math.pi * k / arm_rows) if k <= arm_rows else 0.
                 y_bulk = sign * (.064 * cross + arm * (1 - cross))
-                top_blend = min(t / .06, 1)
+                ramp = min(t / .12, 1)
+                top_blend = math.sqrt(max(0., 1 - (1 - ramp) ** 2))
                 y = y_top * (1 - top_blend) + y_bulk * top_blend
                 if j in (0, columns):
                     y = sign * arm
                 # A small deterministic asymmetry seeds physical buckling.
                 if 0 < k < rows and 0 < j < columns:
-                    y += .001 * math.sin(x0 * 71 + k * .7) * math.sin(math.pi * t)
-                    y += .009 * math.sin(x0 * 28 + .4) * math.sin(math.pi * t / 2) * cross
+                    y += .0003 * math.sin(x0 * 71 + k * .7) * math.sin(math.pi * t)
+                    envelope = math.sin(math.pi * t / 2) ** .7
+                    side_folds = (.026 * math.exp(-((x0 + .205 + .008 * t) / .046) ** 2) +
+                                  .029 * math.exp(-((x0 - .215 + .010 * t) / .055) ** 2))
+                    edge_fade = min(1., (half - abs(x0)) / .035)
+                    y += sign * side_folds * envelope * edge_fade
+                    y += .006 * math.sin(x0 * 24 + .4) * envelope * cross
+                # The turned hem retains a gentle hanging curve rather than
+                # an exactly straight, paper-cut lower edge.
+                z += .004 * (1 - math.cos(x0 / half * math.pi)) / 2 * t ** 10
+                if k == rows - 1:
+                    y += sign * .0015
+                elif k == rows:
+                    y -= sign * .001
                 x = x0 * (1 - t * (1 - d["hem_flat_m"] / d["chest_flat_m"]))
                 row.append(pattern.vertex((x, y, z)))
             grid.append(row)
         body[side] = grid
+        def outline_uv(k, j):
+            px = paper_x(j) if side == "front" else -paper_x(j)
+            return [u0 + (px + half) * density, .40 + (pattern.vertices[grid[k][j]][2] - hem) * density]
+        stitch_paths.extend([
+            {"name": side + "_shoulder_neck", "points": [outline_uv(0, j) for j in range(columns + 1)], "inset_v": -.0025 * density},
+            {"name": side + "_hem", "points": [outline_uv(rows, j) for j in range(columns + 1)], "inset_v": .004 * density},
+        ])
         for k in range(rows):
             for j in range(columns):
                 indices = [grid[k][j], grid[k + 1][j], grid[k + 1][j + 1], grid[k][j + 1]]
@@ -145,6 +165,10 @@ def build_patterns(dimensions, parent, profile="baseline", drape_support=.45):
                 cuff = center + axis * d["sleeve_m"] + cross * (a * scale * math.cos(theta))
                 cuff.y = -b * scale * math.sin(theta)
                 point = base[i].lerp(cuff, t)
+                # Round the upper sleeve cap into the shoulder tangent. The
+                # linear assembled sleeve produced an angular shoulder peak.
+                cap = max(0., math.cos(theta)) * t * (1 - t) ** 2
+                point += Vector((sign * .04, 0., .24)) * cap
                 # Two pre-simulation edge loops give cuffs a turned hem.
                 if r == ring_count - 1:
                     point += (point - (center + axis * d["sleeve_m"])).normalized() * .0015
@@ -254,7 +278,7 @@ def build_patterns(dimensions, parent, profile="baseline", drape_support=.45):
         hanger_top = -.082 - .050 * (abs(x) / .22) ** 1.28 + .007
         if profile == "baseline":
             vertical = max(0., min(1., (-z - .10) / .70))
-            weight = .35 if v.index in free_sleeve_vertices else max(drape_support, .85 - 2.5 * vertical)
+            weight = .22 if v.index in free_sleeve_vertices else max(drape_support, .78 - 1.8 * vertical)
             pin.add([v.index], weight, "REPLACE")
         if .105 <= abs(x) <= .235 and z > hanger_top - .004 and abs(y) < .026:
             v.co.z = max(v.co.z, hanger_top + .004)
@@ -282,7 +306,7 @@ def build_patterns(dimensions, parent, profile="baseline", drape_support=.45):
                 weight = pin.weight(index)
             except RuntimeError:
                 weight = 0
-            pin.add([index], max(weight, .8), "REPLACE")
+            pin.add([index], max(weight, .9), "REPLACE")
     if garment.data.shape_keys:
         for point, vertex in zip(garment.data.shape_keys.key_blocks["Basis"].data, garment.data.vertices):
             point.co = vertex.co
@@ -293,7 +317,7 @@ def build_patterns(dimensions, parent, profile="baseline", drape_support=.45):
         exclusion.add(sorted(excluded), 1., "REPLACE")
     layout = {"schema_version": 1, "units": "m", "uv_origin": "bottom_left",
               "texture_size": [2048, 2048], "uv_per_meter": density,
-              "dimensions": d, "dimensions_source": "default", "islands": islands,
+              "dimensions": d, "dimensions_source": "default", "islands": islands, "stitch_paths_uv": stitch_paths,
               "notes": "Allowed UV regions contain isotropic physical-size rectangles; unused margins are intentional."}
     save_json(MODELS / "tee_uv_layout.json", layout)
     return garment, layout
@@ -378,8 +402,8 @@ def main():
     parser.add_argument("--slug", default="shirt3")
     parser.add_argument("--experiment", help="Write isolated trial outputs under assets-src/experiments/NAME")
     parser.add_argument("--profile", choices=["baseline", "sewn"], default="baseline")
-    parser.add_argument("--bend", type=float, default=.08, help="Explicit bending parameter for an isolated comparison")
-    parser.add_argument("--drape-support", type=float, default=.45, help="Soft body rest-shape support for the smooth reference silhouette")
+    parser.add_argument("--bend", type=float, default=.25, help="Explicit bending parameter for an isolated comparison")
+    parser.add_argument("--drape-support", type=float, default=.33, help="Soft body rest-shape support for broad, smooth cloth folds")
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     if args.frames < 73:
         parser.error("At least 72 frames (3 s) of warmup are required")

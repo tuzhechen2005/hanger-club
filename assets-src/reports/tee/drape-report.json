@@ -9,38 +9,38 @@
     "hem_flat_m": 0.61,
     "rib_width_m": 0.025
   },
-  "single_layer_vertices": 4046,
+  "single_layer_vertices": 4446,
   "garment": {
-    "vertices": 8092,
-    "triangles": 16192,
+    "vertices": 8892,
+    "triangles": 17792,
     "bounds_blender_m": {
       "min": [
-        -0.47288036346435547,
-        -0.07235673069953918,
-        -0.7852675318717957
+        -0.47028419375419617,
+        -0.08480600267648697,
+        -0.7858294248580933
       ],
       "max": [
-        0.4727703034877777,
-        0.07364975661039352,
-        -0.07659745961427689
+        0.4698602557182312,
+        0.08050164580345154,
+        -0.07381352037191391
       ]
     }
   },
   "pre_roll_frames": 72,
   "pre_roll_seconds": 3.0,
-  "last_frame_max_velocity_m_s": 0.012514378875494003,
+  "last_frame_max_velocity_m_s": 0.034433647990226746,
   "seam_method": "Five pattern pieces joined by matching boundary vertices before simulation",
-  "welded_seam_references": 84,
+  "welded_seam_references": 76,
   "topology_changes_after_simulation": "Only required fixed-topology Solidify 0.002 m; no remesh/subdivision/decimation",
   "cloth_settings": {
     "profile": "baseline",
     "vertex_mass_kg": 0.20000000298023224,
-    "drape_support": 0.45,
+    "drape_support": 0.33,
     "target_fabric": "Medium cotton jersey, 180-220 g/m² visual target",
     "physically_calibrated": false,
     "self_collision": true
   },
-  "elapsed_seconds": 18.374,
+  "elapsed_seconds": 19.166,
   "known_issues": [
     "Small pinned shoulder support patches stabilize contact; garment is not held purely by friction",
     "Material parameters are an artist-tuned medium cotton approximation, not a measured fabric calibration"
