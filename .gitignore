@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+*.blend1
+# Third-party reference recording; keep local only
+example_video.mp4
