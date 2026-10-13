@@ -64,9 +64,17 @@ def normal_map(layout, destination):
         u0, v0, u1, v1 = island["rect"]
         box = [round(u0 * size + 3), round((1 - v1) * size + 3), round(u1 * size - 3), round((1 - v0) * size - 3)]
         draw.rectangle(box, outline=180, width=2)
+        if island["name"].startswith("sleeve_"):
+            for offset in (4, 10):
+                draw.line((box[0], box[1] + offset, box[2], box[1] + offset), fill=150, width=1)
         if island["name"] == "collar_rib":
             for xx in range(box[0], box[2], 3):
                 draw.line((xx, box[1], xx, box[3]), fill=110, width=1)
+    for path in layout.get("stitch_paths_uv", []):
+        for row in (0, 1):
+            inset = path.get("inset_v", 0) * (1 + row * .65)
+            points = [(round(u * size), round((1 - v - inset) * size)) for u, v in path["points"]]
+            draw.line(points, fill=160 if row == 0 else 105, width=2 if row == 0 else 1)
     height += np.asarray(seam.filter(ImageFilter.GaussianBlur(.7))) / 255 * .75
     dy, dx = np.gradient(height)
     vectors = np.stack((-dx, dy, np.ones_like(dx)), axis=2)
