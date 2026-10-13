@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { PrintPlacement, Product } from '../data/products'
 import { UV_LAYOUT } from './uvLayout'
+import { paintDetails, paintWeave } from './details'
 
 export interface ClothUniforms {
   /** Per-particle offsets from the cloth proxy (body space, metres). */
@@ -166,7 +167,17 @@ function heatherTexture() {
   return heather
 }
 
-function fabricMaterial(map: THREE.Texture, fabric: string, inner: boolean, source?: THREE.MeshStandardMaterial) {
+/** Surface response per weave: coated nylon is smoother and shinier, fleece is soft and fuzzy. */
+const WEAVE = {
+  knit: { roughness: 1, sheen: 0.45, sheenRoughness: 0.8, clearcoat: 0 },
+  fleece: { roughness: 1, sheen: 0.7, sheenRoughness: 0.9, clearcoat: 0 },
+  denim: { roughness: 1, sheen: 0.2, sheenRoughness: 0.6, clearcoat: 0 },
+  nylon: { roughness: 0.6, sheen: 0.15, sheenRoughness: 0.4, clearcoat: 0.25 },
+}
+
+function fabricMaterial(map: THREE.Texture, product: Product, inner: boolean, source?: THREE.MeshStandardMaterial) {
+  const fabric = product.fabric
+  const surface = WEAVE[product.weave]
   const sheen = new THREE.Color(fabric).lerp(new THREE.Color('#ffffff'), 0.35)
   return new THREE.MeshPhysicalMaterial({
     map,
@@ -175,10 +186,12 @@ function fabricMaterial(map: THREE.Texture, fabric: string, inner: boolean, sour
     normalScale: source?.normalScale ?? new THREE.Vector2(1, 1),
     aoMap: source?.aoMap ?? null,
     roughnessMap: source?.roughnessMap ?? null,
-    roughness: source?.roughnessMap ? 1 : 0.9,
+    roughness: (source?.roughnessMap ? 1 : 0.9) * surface.roughness,
     metalness: 0,
-    sheen: 0.45,
-    sheenRoughness: 0.8,
+    sheen: surface.sheen,
+    sheenRoughness: surface.sheenRoughness,
+    clearcoat: inner ? 0 : surface.clearcoat,
+    clearcoatRoughness: 0.5,
     sheenColor: sheen,
     // The placeholder is a single sheet; the Blender garment is a closed 2 mm shell.
     side: source ? THREE.FrontSide : THREE.DoubleSide,
@@ -187,8 +200,8 @@ function fabricMaterial(map: THREE.Texture, fabric: string, inner: boolean, sour
 
 /** Outer + inner fabric for one product, sharing the GLB's normal/ORM maps when given. */
 export function createFabricMaterials(map: THREE.Texture, product: Product, source?: { outer?: THREE.MeshStandardMaterial; inner?: THREE.MeshStandardMaterial }) {
-  const outer = fabricMaterial(map, product.fabric, false, source?.outer)
-  const inner = fabricMaterial(map, product.fabric, true, source?.inner ?? source?.outer)
+  const outer = fabricMaterial(map, product, false, source?.outer)
+  const inner = fabricMaterial(map, product, true, source?.inner ?? source?.outer)
   outer.userData.heather = inner.userData.heather = product.heather
   return { outer, inner }
 }
@@ -264,16 +277,19 @@ export function createGarmentTexture(product: Product, onUpdate: () => void): TH
   g.fillRect(0, 0, SIZE, SIZE)
   g.globalAlpha = 1
   g.globalCompositeOperation = 'source-over'
+  paintWeave(g, product, SIZE)
+  paintDetails(g, product, SIZE)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.flipY = false
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 4
 
-  for (const [side, rect] of [
+  // Photo-cropped prints are placed on the tee's panels (other kinds carry painted details).
+  for (const [side, rect] of (product.kind === 'tee' ? [
     ['front', UV_LAYOUT.front],
     ['back', UV_LAYOUT.back],
-  ] as const) {
+  ] : []) as Array<readonly ['front' | 'back', typeof UV_LAYOUT.front]>) {
     const place = product.prints[side]
     if (!place) continue
     loadImage(place.url)

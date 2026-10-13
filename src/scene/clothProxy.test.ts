@@ -19,13 +19,13 @@ function setup(garments = 1) {
   const inner: ProxyPart = { geometry: tube(0.002), toPivot: new THREE.Matrix4() }
   const bar = new THREE.CylinderGeometry(0.01, 0.01, 0.6, 8, 12).rotateZ(Math.PI / 2).translate(0, -0.11, 0)
   const topology = buildProxy([outer, inner], { geometry: bar, toPivot: new THREE.Matrix4() }, { ...JERSEY_TEE })
-  return { topology, outer, inner, sim: new ClothSim(topology, garments) }
+  return { topology, outer, inner, sim: new ClothSim(Array.from({ length: garments }, () => topology)) }
 }
 
 function maxOffset(sim: ClothSim, g = 0) {
   const data = sim.textures[g].image.data as Float32Array
   let max = 0
-  for (let i = 0; i < sim.topology.count; i++) max = Math.max(max, Math.hypot(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]))
+  for (let i = 0; i < sim.topologies[g].count; i++) max = Math.max(max, Math.hypot(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]))
   return max
 }
 
@@ -141,5 +141,24 @@ describe('cloth proxy', () => {
       }
     }
     expect(closest).toBeGreaterThan(reach / 2)
+  })
+
+  it('steps garments of different kinds (and sizes) together', () => {
+    const tee = setup().topology
+    const long = buildProxy([{ geometry: tube(0).scale(1, 1.6, 1), toPivot: new THREE.Matrix4() }],
+      { geometry: new THREE.CylinderGeometry(0.01, 0.01, 0.6, 8, 12).rotateZ(Math.PI / 2).translate(0, -0.11, 0), toPivot: new THREE.Matrix4() },
+      { ...JERSEY_TEE, cell: 0.05, radius: 0.022 })
+    expect(long.count).not.toBe(tee.count)
+    const sim = new ClothSim([tee, long, tee])
+    const bodies = [0, 1, 2].map((g) => new THREE.Matrix4().makeTranslation(g * 0.7, 0, 0))
+    let x = 0
+    for (let f = 0; f < 20; f++) {
+      x += 1.5 / 60
+      sim.step(1 / 60, bodies.map((b, g) => b.clone().setPosition(g * 0.7 + x, 0, 0)), [false, false, false])
+    }
+    for (let g = 0; g < 3; g++) expect(maxOffset(sim, g)).toBeGreaterThan(0.002)
+    let frames = 0
+    while (sim.step(1 / 60, bodies.map((b, g) => b.clone().setPosition(g * 0.7 + x, 0, 0)), [false, false, false]) && frames < 600) frames++
+    expect(frames / 60).toBeLessThan(3)
   })
 })

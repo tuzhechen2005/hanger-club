@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "kind": "hoodie",
+  "units": "m",
+  "uv_origin": "bottom_left",
+  "texture_size": [
+    2048,
+    2048
+  ],
+  "uv_per_meter": 0.49379761066697536,
+  "dimensions": {
+    "family": "top",
+    "length_m": 0.72,
+    "chest_flat_m": 0.6,
+    "hem_flat_m": 0.56,
+    "armhole_m": 0.27,
+    "sleeve_m": 0.62,
+    "sleeve_opening_m": 0.18,
+    "sleeve_angle": 6,
+    "rib_width_m": 0.02,
+    "hood": {
+      "length_m": 0.34,
+      "half_width_m": 0.16,
+      "thickness_m": 0.011
+    },
+    "mass": 0.05,
+    "bend": 3.0,
+    "drape_support": 0.15,
+    "sleeve_support": 2.2
+  },
+  "islands": [
+    {
+      "name": "front",
+      "rect": [
+        0.0,
+        0.44,
+        0.2962785664001852,
+        0.7955342796802223
+      ],
+      "physical_size_m": [
+        0.6,
+        0.72
+      ]
+    },
+    {
+      "name": "back",
+      "rect": [
+        0.52,
+        0.44,
+        0.8162785664001853,
+        0.7955342796802223
+      ],
+      "physical_size_m": [
+        0.6,
+        0.72
+      ]
+    },
+    {
+      "name": "sleeve_left",
+      "rect": [
+        0.0,
+        0.0,
+        0.24577720492620886,
+        0.3061545186135247
+      ],
+      "physical_size_m": [
+        0.49772862325971184,
+        0.62
+      ]
+    },
+    {
+      "name": "sleeve_right",
+      "rect": [
+        0.33,
+        0.0,
+        0.5757772049262089,
+        0.3061545186135247
+      ],
+      "physical_size_m": [
+        0.49772862325971184,
+        0.62
+      ]
+    },
+    {
+      "name": "hood",
+      "rect": [
+        0.67,
+        0.0,
+        1.0,
+        0.21789118762677162
+      ],
+      "physical_size_m": [
+        0.32,
+        0.34
+      ]
+    },
+    {
+      "name": "collar_rib",
+      "rect": [
+        0.67,
+        0.42,
+        0.9344883593123421,
+        0.4298759522133395
+      ],
+      "physical_size_m": [
+        0.5356209783095063,
+        0.02
+      ]
+    }
+  ],
+  "stitch_paths_uv": [],
+  "notes": "Islands share one isotropic density; unused margins are intentional."
+}

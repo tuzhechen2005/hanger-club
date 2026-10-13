@@ -1,0 +1,57 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "kind": "longsleeve",
+  "dimensions": {
+    "family": "top",
+    "length_m": 0.72,
+    "chest_flat_m": 0.56,
+    "hem_flat_m": 0.55,
+    "armhole_m": 0.25,
+    "sleeve_m": 0.62,
+    "sleeve_opening_m": 0.17,
+    "sleeve_angle": 6,
+    "rib_width_m": 0.02,
+    "hood": null,
+    "mass": 0.035,
+    "bend": 1.5,
+    "drape_support": 0.15,
+    "sleeve_support": 2.2
+  },
+  "single_layer_vertices": 5048,
+  "garment": {
+    "vertices": 10096,
+    "triangles": 20200,
+    "bounds_blender_m": {
+      "min": [
+        -0.43194302916526794,
+        -0.05416785180568695,
+        -0.8809046745300293
+      ],
+      "max": [
+        0.42887234687805176,
+        0.04991372302174568,
+        -0.080027736723423
+      ]
+    }
+  },
+  "pattern_pieces": [
+    "back",
+    "collar_rib",
+    "front",
+    "sleeve_left",
+    "sleeve_right"
+  ],
+  "settle_frames": 288,
+  "last_frame_max_velocity_m_s": 0.05079127103090286,
+  "start_vertices_pushed_off_hanger": 2,
+  "crease_relaxation": {
+    "iterations": 0,
+    "max_vertex_shift_m": 0.0
+  },
+  "extent_m": {
+    "width": 0.8588347434997559,
+    "depth": 0.10223441570997238,
+    "height": 0.7998062968254089
+  },
+  "elapsed_seconds": 86.109
+}

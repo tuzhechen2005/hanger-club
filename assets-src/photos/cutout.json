@@ -1,0 +1,57 @@
+{
+  "note": "Per-photo cut-out hints for tools/web/export_photos.py. crop is [left, top, right, bottom] as fractions of the photo; grabcut segments the garment instead of keying a plain backdrop; drop_light also removes pale, unsaturated pixels (a white sheet the garment lies on). erode shrinks the cut-out by that many pixels (a white outline drawn round the garment). keep_light keeps pale pixels inside [left, top, right, bottom] (a white fur trim).",
+  "hoodie1-front": {
+    "crop": [
+      0,
+      0,
+      0.84,
+      1
+    ],
+    "grabcut": true
+  },
+  "longsleeve1-front": {
+    "crop": [
+      0.06,
+      0.02,
+      0.98,
+      1
+    ],
+    "grabcut": true
+  },
+  "pants1-front": {
+    "crop": [
+      0.2,
+      0,
+      0.86,
+      0.93
+    ],
+    "grabcut": true
+  },
+  "pants2-front": {
+    "crop": [
+      0,
+      0,
+      1,
+      1
+    ],
+    "grabcut": true,
+    "drop_light": true
+  },
+  "parka1-front": {
+    "crop": [
+      0,
+      0,
+      1,
+      1
+    ],
+    "grabcut": true,
+    "erode": 8,
+    "drop_light": true,
+    "keep_light": [
+      0.37,
+      0.08,
+      0.7,
+      0.36
+    ]
+  }
+}

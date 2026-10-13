@@ -8,9 +8,9 @@ import { computeFraming, FOV, GARMENT_BOTTOM, INSPECT_Y, INSPECT_Z } from './fra
 import { useUI } from '../state/store'
 import { createHangerGeometry, createTeeGeometry } from './geometry'
 import { clothDepthMaterial, clothUniforms, createFabricMaterials, createGarmentTexture, patchCloth, type ClothUniforms } from './materials'
-import { useGarmentModel, type GarmentModel } from './models'
-import { buildProxy, ClothSim, coarser, JERSEY_TEE, type ProxyPart } from './clothProxy'
-import type { Product } from '../data/products'
+import { useGarmentModels, type GarmentModel } from './models'
+import { buildProxy, ClothSim, coarser, JERSEY_TEE, PROFILES, type ProxyPart, type ProxyTopology } from './clothProxy'
+import type { Kind, Product } from '../data/products'
 
 interface GarmentRefs {
   slot: THREE.Group
@@ -134,7 +134,7 @@ function Garment({ index, placeholder, model, sim }: { index: number; placeholde
     for (const u of parts.uniforms) {
       u.uDisp.value = sim.textures[index]
       u.uGrad.value = sim.gradients[index]
-      u.uDispWidth.value = sim.topology.textureWidth
+      u.uDispWidth.value = sim.topologies[index].textureWidth
       u.uDispOn.value = 1
     }
     for (const part of [parts.hook, parts.wood, parts.cloth]) part.traverse((o) => (o.castShadow = true))
@@ -161,7 +161,10 @@ function Garment({ index, placeholder, model, sim }: { index: number; placeholde
   )
 }
 
-function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh | null>; wall: React.RefObject<THREE.Mesh | null>; sim: ClothSim; onSlow: () => void }) {
+/** Hanger-space top and bottom of each product's garment (placeholder tee until its model loads). */
+type Extents = { top: number; bottom: number }[]
+
+function Driver({ rail, wall, sim, onSlow, extents }: { rail: React.RefObject<THREE.Mesh | null>; wall: React.RefObject<THREE.Mesh | null>; sim: ClothSim; onSlow: () => void; extents: Extents }) {
   const bodies = useMemo(() => products.map(() => new THREE.Matrix4()), [])
   const follow = useMemo(() => products.map(() => false), [])
   const inertia = useMemo(() => products.map(() => 1), [])
@@ -179,7 +182,14 @@ function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh 
     invalidate()
   }, [camera, gl, invalidate, raycaster])
 
-  const framing = useMemo(() => computeFraming(size.width / size.height), [size.width, size.height])
+  // Browse fits the longest garment on the rail; each close-up fits its own piece.
+  const aspect = size.width / size.height
+  const browseBottom = Math.min(...extents.map((e) => e.bottom))
+  const framings = useMemo(() => extents.map((e) => computeFraming(aspect, browseBottom, e.bottom)), [aspect, browseBottom, extents])
+  const index = useUI((s) => s.index)
+  const framing = framings[index]
+  /** The close-up camera eases to the active piece's framing (switching tee → trousers). */
+  const inspectCamera = useRef<{ x: number; y: number; z: number } | null>(null)
 
   useEffect(() => {
     rig.aspect = size.width / size.height
@@ -189,8 +199,7 @@ function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh 
     root.setProperty('--browse-info-top', `${(framing.browseInfo * 100).toFixed(2)}%`)
     root.setProperty('--inspect-info-top', `${(framing.inspectInfo * 100).toFixed(2)}%`)
     // Where the close-up garment lands on screen, so the original photo can develop right on
-    // top of it (ui/PhotoView). The export centres each photo with the tee about 0.76 of the
-    // square tall; the 3D tee runs from the collar (9 cm below the hook) to the hem.
+    // top of it (ui/PhotoView): the photo's garment box is matched to the 3D garment's height.
     const cam = new THREE.PerspectiveCamera(FOV, size.width / size.height, 0.1, 40)
     cam.position.set(framing.inspect.cameraX, framing.inspect.cameraY, framing.inspect.cameraZ)
     cam.lookAt(framing.inspect.cameraX, framing.inspect.cameraY, 0)
@@ -199,13 +208,15 @@ function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh 
       const v = new THREE.Vector3(0, y, INSPECT_Z).project(cam)
       return { x: ((v.x + 1) / 2) * size.width, y: ((1 - v.y) / 2) * size.height }
     }
-    const collar = toScreen(INSPECT_Y - 0.09)
-    const hem = toScreen(INSPECT_Y + GARMENT_BOTTOM)
-    root.setProperty('--g-x', `${collar.x.toFixed(1)}px`)
-    root.setProperty('--g-y', `${((collar.y + hem.y) / 2).toFixed(1)}px`)
-    root.setProperty('--g-s', `${((hem.y - collar.y) / 0.76).toFixed(1)}px`)
+    const top = toScreen(INSPECT_Y + extents[index].top)
+    const hem = toScreen(INSPECT_Y + extents[index].bottom)
+    const [l, t, r, b] = products[index].photos[0].bbox
+    const side = (hem.y - top.y) / (b - t)
+    root.setProperty('--g-x', `${(top.x - ((l + r) / 2 - 0.5) * side).toFixed(1)}px`)
+    root.setProperty('--g-y', `${((top.y + hem.y) / 2 - ((t + b) / 2 - 0.5) * side).toFixed(1)}px`)
+    root.setProperty('--g-s', `${side.toFixed(1)}px`)
     invalidate()
-  }, [framing, size.width, size.height, invalidate])
+  }, [framing, index, extents, size.width, size.height, invalidate])
 
   const revealed = useRef(false)
   useFrame((_, dt) => {
@@ -217,7 +228,15 @@ function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh 
       if (!useUI.getState().photo) useUI.getState().openPhoto('garment')
     }
     const b = rig.blend
-    const { browse, inspect } = framing
+    const { browse } = framing
+    const goal = framings[rig.active].inspect
+    const ease = inspectCamera.current ? 1 - Math.exp(-Math.min(dt, 0.1) * 7) : 1
+    const current = (inspectCamera.current ??= { x: goal.cameraX, y: goal.cameraY, z: goal.cameraZ })
+    current.x += (goal.cameraX - current.x) * ease
+    current.y += (goal.cameraY - current.y) * ease
+    current.z += (goal.cameraZ - current.z) * ease
+    const easing = Math.abs(goal.cameraZ - current.z) + Math.abs(goal.cameraY - current.y) > 1e-4
+    const inspect = { cameraX: current.x, cameraY: current.y, cameraZ: current.z }
     const cx = browse.cameraX + (inspect.cameraX - browse.cameraX) * b
     camera.position.set(cx, browse.cameraY + (inspect.cameraY - browse.cameraY) * b, browse.cameraZ + (inspect.cameraZ - browse.cameraZ) * b)
     camera.lookAt(cx, camera.position.y, 0)
@@ -258,14 +277,15 @@ function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh 
       if (!g) return
       g.body.updateWorldMatrix(true, false)
       bodies[i].copy(g.body.matrixWorld)
-      // Off-screen neighbours during the close-up don't need cloth, just their rest shape.
+      // Off-screen neighbours during the close-up, and the far ends of the rail, don't need
+      // cloth, just their rest shape.
       // Baked clips keep simulating: the bake is the shape, the proxy adds the inertia.
-      follow[i] = rig.reduced || rig.offstage(i)
+      follow[i] = rig.reduced || rig.offstage(i) || rig.distant(i)
       inertia[i] = rig.inertia(i)
     })
     const clothMoving = registry.length === products.length && sim.step(dt, bodies, follow, inertia)
     if (sim.slow) onSlow()
-    if (moving || clothMoving) invalidate()
+    if (moving || clothMoving || (easing && b > 0)) invalidate()
   })
   return null
 }
@@ -287,18 +307,40 @@ function Environment() {
 
 function SceneContent() {
   const placeholder = usePlaceholderAssets()
-  const model = useGarmentModel()
+  const models = useGarmentModels()
   useEffect(() => {
-    rig.bakedClips = !!model?.animated
+    rig.baked = products.map((p) => !!models[p.kind]?.animated)
     rig.invalidate()
-  }, [model])
-  // One proxy topology for the shared garment geometry, one simulation for all garments.
-  // A device that cannot keep up with the cloth gets a coarser proxy once (cloth resets to rest).
+  }, [models])
+  // One proxy topology per garment kind (built from its geometry and fabric profile), one
+  // simulation for all garments. A device that cannot keep up gets coarser proxies once
+  // (the cloth resets to rest).
   const [coarse, setCoarse] = useState(false)
   const sim = useMemo(() => {
-    const { parts, support } = proxyParts(model, placeholder)
-    return new ClothSim(buildProxy(parts, support, coarse ? coarser(JERSEY_TEE) : JERSEY_TEE), products.length)
-  }, [model, placeholder, coarse])
+    const profile = (kind: Kind) => (coarse ? coarser(PROFILES[kind]) : PROFILES[kind])
+    let fallback: ProxyTopology | null = null
+    const byKind = new Map<Kind, ProxyTopology>()
+    const topologyFor = (kind: Kind) => {
+      const model = models[kind]
+      if (!model) {
+        if (!fallback) {
+          const { parts, support } = proxyParts(null, placeholder)
+          fallback = buildProxy(parts, support, coarse ? coarser(JERSEY_TEE) : JERSEY_TEE)
+        }
+        return fallback
+      }
+      if (!byKind.has(kind)) {
+        const { parts, support } = proxyParts(model, placeholder)
+        byKind.set(kind, buildProxy(parts, support, profile(kind)))
+      }
+      return byKind.get(kind)!
+    }
+    return new ClothSim(products.map((p) => topologyFor(p.kind)))
+  }, [models, placeholder, coarse])
+  const extents = useMemo<Extents>(
+    () => products.map((p) => ({ top: models[p.kind]?.top ?? -0.08, bottom: models[p.kind]?.bottom ?? GARMENT_BOTTOM })),
+    [models],
+  )
   const scene = useThree((state) => state.scene)
   useEffect(() => {
     if (import.meta.env.DEV) Object.assign(window, { __sim: sim, __scene: scene })
@@ -309,7 +351,7 @@ function SceneContent() {
   const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
   return (
     <>
-      <Driver rail={rail} wall={wall} sim={sim} onSlow={() => setCoarse(true)} />
+      <Driver rail={rail} wall={wall} sim={sim} onSlow={() => setCoarse(true)} extents={extents} />
       <Environment />
       {/* Studio three-point light: warm key from front left, cool fill, a rim from behind
           that separates the garments from the backdrop and shows their volume. */}
@@ -341,7 +383,7 @@ function SceneContent() {
         <shadowMaterial opacity={0.1} />
       </mesh>
       {products.map((p, i) => (
-        <Garment key={p.id} index={i} placeholder={placeholder} model={model} sim={sim} />
+        <Garment key={p.id} index={i} placeholder={placeholder} model={models[p.kind] ?? null} sim={sim} />
       ))}
     </>
   )

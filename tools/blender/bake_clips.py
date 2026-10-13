@@ -66,7 +66,8 @@ def set_linear(action):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--source", type=Path, default=SOURCES / "tee_drape.blend")
+    parser.add_argument("--kind", default="tee", help="Garment kind: tee (build_tee.py) or a build_garment.py kind")
+    parser.add_argument("--source", type=Path, help="Drape file (default: assets-src/blender/<kind>_drape.blend)")
     parser.add_argument("--warmup", type=int, default=121)
     parser.add_argument("--experiment", help="Isolated clip trial name")
     parser.add_argument("--settle-blend", type=int, default=8, help="Ease the last N return frames onto the base pose")
@@ -78,12 +79,14 @@ def main():
     if not 0 <= args.motion_support <= 1:
         parser.error("motion-support must be between 0 and 1")
     started = time.perf_counter()
-    out_models, out_sources, out_reports = MODELS, SOURCES, REPORTS / "tee"
+    kind = args.kind
+    args.source = args.source or SOURCES / f"{kind}_drape.blend"
+    out_models, out_sources, out_reports = MODELS, SOURCES, REPORTS / kind
     if args.experiment:
         if Path(args.experiment).name != args.experiment:
             parser.error("experiment must be a directory name")
         trial = ROOT / "assets-src" / "experiments" / args.experiment
-        out_models, out_sources, out_reports = trial / "models", trial / "blender", trial / "reports" / "tee"
+        out_models, out_sources, out_reports = trial / "models", trial / "blender", trial / "reports" / kind
     for directory in (out_models, out_sources, out_reports):
         directory.mkdir(parents=True, exist_ok=True)
     bpy.ops.wm.open_mainfile(filepath=str(args.source.resolve()))
@@ -117,7 +120,8 @@ def main():
             original_weight = original_pin.weight(vertex.index)
         except RuntimeError:
             original_weight = 0.
-        vertical = max(0., min(1., (-vertex.co.z - .10) / .70))
+        # Longer garments (trousers) relax over their own length.
+        vertical = max(0., min(1., (-vertex.co.z - .10) / max(.70, float(garment.get("length_m", .78)) - .08)))
         weight = max(original_weight, args.motion_support * (1 - .22 * vertical))
         # Cloth lying on the hanger moves with it; letting it lag during the 360° turn
         # only drives it into the wood.
@@ -145,7 +149,9 @@ def main():
         for frame, value in keys:
             cloth.settings.pin_stiffness = value
             cloth.settings.keyframe_insert("pin_stiffness", frame=frame)
-    probe = ShellProbe(garment, solidify)
+    # The tee's pins and clearances keep it off the wood; other kinds (hood roots on the shoulders,
+    # waistbands in the clips) also need relaxing to push cloth back out of the hanger.
+    probe = ShellProbe(garment, solidify, collider=wood if kind != "tee" else None, clearance=.006)
     samples, original_mesh, previous, velocities = [], None, None, {}
     relaxed = []
     for frame in range(1, last_frame + 1):
@@ -176,11 +182,11 @@ def main():
             i = len(samples) - n - 1 + k
             samples[i] = samples[i] * (1 - a) + samples[0] * a
     probe.remove()
-    np.savez_compressed(out_sources / "tee_clip_samples.npz", positions=np.stack(samples))
+    np.savez_compressed(out_sources / f"{kind}_clip_samples.npz", positions=np.stack(samples))
     # Bake ambient occlusion in the stationary pose on the outer single layer.
     scene.frame_set(args.warmup)
     camera = studio()
-    shared_materials(garment, bake_ao=True)
+    shared_materials(garment, bake_ao=True, name=kind)
     material_refs = list(garment.data.materials)
     bpy.data.objects.remove(garment, do_unlink=True)
     garment = bpy.data.objects.new("Garment", original_mesh)
@@ -232,9 +238,9 @@ def main():
     scene.frame_start, scene.frame_end = 0, 80
     scene.frame_set(0)
     pivot.location, pivot.rotation_euler = (0, 0, 0), (0, 0, 0)
-    bpy.ops.wm.save_as_mainfile(filepath=str(out_sources / "tee_animated.blend"))
-    export_glb(out_models / "tee_anim.glb", descendants(pivot), animated=True)
-    static_derivative(out_models / "tee_anim.glb", out_models / "tee.glb")
+    bpy.ops.wm.save_as_mainfile(filepath=str(out_sources / f"{kind}_animated.blend"))
+    export_glb(out_models / f"{kind}_anim.glb", descendants(pivot), animated=True)
+    static_derivative(out_models / f"{kind}_anim.glb", out_models / f"{kind}.glb")
     relative_displacement = np.linalg.norm(np.stack(samples) - samples[0], axis=2)
     save_json(out_reports / "animation-report.json", {
         "blender_version": bpy.app.version_string, "warmup_frames": args.warmup - 1,

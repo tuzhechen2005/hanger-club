@@ -103,7 +103,7 @@ export function IndexSheet({ onPick }: { onPick: (index: number) => void }) {
     <Sheet name="index" label="The rail">
       <span className="eyebrow">Tonight on the rail</span>
       <h2>
-        Six pieces, <i>hung by hand.</i>
+        {products.length} pieces, <i>hung by hand.</i>
       </h2>
       <ol className="index-list">
         {products.map((p, i) => (
@@ -139,8 +139,10 @@ export function IndexSheet({ onPick }: { onPick: (index: number) => void }) {
         </p>
       </div>
       <p className="note">
-        Interaction demo. One shared 3D tee drapes every piece; only the Wood Label Tee has a finished texture, the others use rough
-        print crops. Product photos belong to their respective brands and are used for a private prototype only.
+        Interaction demo. Each kind of garment (tee, long sleeve, hoodie, shell, skirt, trousers) is one 3D model draped in
+        Blender; colours and details are painted per piece. Only the Wood Label Tee has a finished texture. The tee photos
+        belong to their brands and are used for a private prototype only; the other photos are freely licensed from Wikimedia
+        Commons (credited in each photo).
       </p>
     </Sheet>
   )

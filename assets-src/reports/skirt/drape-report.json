@@ -1,0 +1,48 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "kind": "skirt",
+  "dimensions": {
+    "family": "bottom",
+    "length_m": 0.46,
+    "waist_flat_m": 0.37,
+    "hem_flat_m": 0.52,
+    "band_m": 0.04,
+    "mass": 0.045,
+    "bend": 3.0,
+    "drape_support": 0.18
+  },
+  "single_layer_vertices": 2000,
+  "garment": {
+    "vertices": 4000,
+    "triangles": 8000,
+    "bounds_blender_m": {
+      "min": [
+        -0.24925370514392853,
+        -0.04873550310730934,
+        -0.5609692335128784
+      ],
+      "max": [
+        0.24295981228351593,
+        0.07606679946184158,
+        -0.09511537104845047
+      ]
+    }
+  },
+  "pattern_pieces": [
+    "back",
+    "front"
+  ],
+  "settle_frames": 81,
+  "last_frame_max_velocity_m_s": 0.0027911255601793528,
+  "start_vertices_pushed_off_hanger": 24,
+  "crease_relaxation": {
+    "iterations": 0,
+    "max_vertex_shift_m": 0.0
+  },
+  "extent_m": {
+    "width": 0.49034208059310913,
+    "depth": 0.12284945696592331,
+    "height": 0.4657388925552368
+  },
+  "elapsed_seconds": 21.281
+}

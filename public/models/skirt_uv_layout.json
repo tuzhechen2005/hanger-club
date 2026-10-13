@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "kind": "skirt",
+  "units": "m",
+  "uv_origin": "bottom_left",
+  "texture_size": [
+    2048,
+    2048
+  ],
+  "uv_per_meter": 0.923076923076923,
+  "dimensions": {
+    "family": "bottom",
+    "length_m": 0.46,
+    "waist_flat_m": 0.37,
+    "hem_flat_m": 0.52,
+    "band_m": 0.04,
+    "mass": 0.045,
+    "bend": 3.0,
+    "drape_support": 0.18
+  },
+  "islands": [
+    {
+      "name": "front",
+      "rect": [
+        0.0,
+        0.01,
+        0.48,
+        0.4346153846153846
+      ],
+      "physical_size_m": [
+        0.52,
+        0.46
+      ]
+    },
+    {
+      "name": "back",
+      "rect": [
+        0.51,
+        0.01,
+        0.99,
+        0.4346153846153846
+      ],
+      "physical_size_m": [
+        0.52,
+        0.46
+      ]
+    }
+  ],
+  "stitch_paths_uv": [],
+  "notes": "Islands share one isotropic density; unused margins are intentional."
+}

@@ -3,7 +3,8 @@ import numpy as np
 from common import *
 
 
-def shared_materials(garment, bake_ao=False):
+def shared_materials(garment, bake_ao=False, name="tee"):
+    """ORM (baked drape AO) and knit normal for one garment kind: <name>_orm.png, <name>_normal.png."""
     texture_dir = ROOT / "public" / "textures"
     texture_dir.mkdir(parents=True, exist_ok=True)
     size = 2048
@@ -38,14 +39,14 @@ def shared_materials(garment, bake_ao=False):
         orm = bpy.data.images.new("ORM", size, size, alpha=True)
         orm.colorspace_settings.name = "Non-Color"
         orm.pixels.foreach_set(rgba.ravel())
-        orm.filepath_raw = str(texture_dir / "tee_orm.png")
+        orm.filepath_raw = str(texture_dir / f"{name}_orm.png")
         orm.file_format = "PNG"
         orm.save()
     else:
-        orm = bpy.data.images.load(str(texture_dir / "tee_orm.png"), check_existing=True)
+        orm = bpy.data.images.load(str(texture_dir / f"{name}_orm.png"), check_existing=True)
     orm.colorspace_settings.name = "Non-Color"
     orm.pack()
-    normal = bpy.data.images.load(str(texture_dir / "tee_normal.png"), check_existing=True)
+    normal = bpy.data.images.load(str(texture_dir / f"{name}_normal.png"), check_existing=True)
     normal.colorspace_settings.name = "Non-Color"
     normal.pack()
     group = bpy.data.node_groups.get("glTF Material Output")

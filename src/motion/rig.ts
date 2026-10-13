@@ -36,6 +36,8 @@ const PENDULUM_LENGTH = 0.42
  */
 const SWING_DAMPING = 8
 const SWING_MAX_ACCEL = 5
+/** Garments this many places either side of the current one get live cloth on the rail. */
+const RAIL_SIMULATED = 3.2
 /** Share of rail motion (sliding, turning side-on) the cloth feels as inertia. */
 const RAIL_INERTIA = 0.3
 
@@ -111,8 +113,16 @@ class Rig {
   private settledFrames = 0
   /** Baked cloth clip per garment; null = base mesh. */
   private clips: Array<{ name: ClipName; t: number } | null> = products.map(() => null)
-  /** Set by the scene once tee_anim.glb is in: lift and return then play the baked cloth clips. */
-  bakedClips = false
+  /**
+   * Per garment, set by the scene once its kind's animated model is in: lift and return then
+   * play the baked cloth clips.
+   */
+  baked: boolean[] = products.map(() => false)
+
+  /** True once every garment has its baked clips (tests and tools wait for this). */
+  get bakedClips() {
+    return this.baked.every(Boolean)
+  }
 
   /** Set by the scene: request a frame (render-on-demand). */
   invalidate: () => void = () => {}
@@ -127,7 +137,7 @@ class Rig {
 
   private startClip(i: number, name: ClipName) {
     this.clips[i] = { name, t: 0 }
-    if (name !== 'hold' && this.bakedClips) {
+    if (name !== 'hold' && this.baked[i]) {
       // The bake already contains the swing; start from rest so the two don't add up.
       const track = this.tracks[i]
       track.lateral.angle = track.lateral.velocity = 0
@@ -141,10 +151,20 @@ class Rig {
     return i !== this.active && !(this.switching && i === this.switching.from)
   }
 
+  /**
+   * True for rail garments far from the current piece: packed side-on at the ends of the rail,
+   * their cloth barely shows any motion, so it rests instead of being simulated.
+   */
+  distant(i: number) {
+    if (i === this.active && this.mode !== 'browse') return false
+    if (this.switching && i === this.switching.from) return false
+    return Math.abs(i - this.pos.x) > RAIL_SIMULATED
+  }
+
   /** True while garment i plays a baked clip (the bake contains the swing, so no pendulum). */
   playing(i: number) {
     const clip = this.clips[i]
-    return this.bakedClips && !!clip && clip.name !== 'hold'
+    return this.baked[i] && !!clip && clip.name !== 'hold'
   }
 
   /**

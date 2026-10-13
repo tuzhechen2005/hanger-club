@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "kind": "longsleeve",
+  "units": "m",
+  "uv_origin": "bottom_left",
+  "texture_size": [
+    2048,
+    2048
+  ],
+  "uv_per_meter": 0.49379761066697536,
+  "dimensions": {
+    "family": "top",
+    "length_m": 0.72,
+    "chest_flat_m": 0.56,
+    "hem_flat_m": 0.55,
+    "armhole_m": 0.25,
+    "sleeve_m": 0.62,
+    "sleeve_opening_m": 0.17,
+    "sleeve_angle": 6,
+    "rib_width_m": 0.02,
+    "hood": null,
+    "mass": 0.035,
+    "bend": 1.5,
+    "drape_support": 0.15,
+    "sleeve_support": 2.2
+  },
+  "islands": [
+    {
+      "name": "front",
+      "rect": [
+        0.0,
+        0.44,
+        0.2765266619735062,
+        0.7955342796802223
+      ],
+      "physical_size_m": [
+        0.56,
+        0.72
+      ]
+    },
+    {
+      "name": "back",
+      "rect": [
+        0.52,
+        0.44,
+        0.7965266619735063,
+        0.7955342796802223
+      ],
+      "physical_size_m": [
+        0.56,
+        0.72
+      ]
+    },
+    {
+      "name": "sleeve_left",
+      "rect": [
+        0.0,
+        0.0,
+        0.2358371739232967,
+        0.3061545186135247
+      ],
+      "physical_size_m": [
+        0.4775988559457589,
+        0.62
+      ]
+    },
+    {
+      "name": "sleeve_right",
+      "rect": [
+        0.33,
+        0.0,
+        0.5658371739232967,
+        0.3061545186135247
+      ],
+      "physical_size_m": [
+        0.4775988559457589,
+        0.62
+      ]
+    },
+    {
+      "name": "collar_rib",
+      "rect": [
+        0.67,
+        0.0,
+        0.9344883593123421,
+        0.009875952213339508
+      ],
+      "physical_size_m": [
+        0.5356209783095063,
+        0.02
+      ]
+    }
+  ],
+  "stitch_paths_uv": [],
+  "notes": "Islands share one isotropic density; unused margins are intentional."
+}

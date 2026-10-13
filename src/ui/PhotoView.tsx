@@ -126,7 +126,11 @@ export function PhotoView() {
         <button className="photo-back" onClick={close} autoFocus>
           Turn it in 3D
         </button>
-        <p className="note">Brand product photo, used for this private demo only.</p>
+        <p className="note">
+          {product.credit
+            ? `Photo: ${product.credit}, via Wikimedia Commons.`
+            : 'Brand product photo, used for this private demo only.'}
+        </p>
       </div>
     </dialog>
   )

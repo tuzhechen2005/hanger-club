@@ -1,0 +1,77 @@
+{
+ "note": "Freely licensed photos from Wikimedia Commons, used for colour reference and the original-photo view. Keep this attribution with any use.",
+ "photos": {
+  "hoodie1": {
+   "title": "File:Celine Hoodie.jpg",
+   "source": "https://commons.wikimedia.org/wiki/File:Celine_Hoodie.jpg",
+   "license": "CC BY 3.0",
+   "author": "킥스타일",
+   "size": [
+    911,
+    1166
+   ],
+   "license_url": "https://creativecommons.org/licenses/by/3.0",
+   "file": "hoodie1-front.jpg"
+  },
+  "parka1": {
+   "title": "File:DustyRoyParka.jpg",
+   "source": "https://commons.wikimedia.org/wiki/File:DustyRoyParka.jpg",
+   "license": "Public domain",
+   "author": "Dusty Roy",
+   "size": [
+    750,
+    1009
+   ],
+   "license_url": "",
+   "file": "parka1-front.jpg"
+  },
+  "longsleeve1": {
+   "title": "File:Dunkles Sweatshirt mit hellem Ornament.jpg",
+   "source": "https://commons.wikimedia.org/wiki/File:Dunkles_Sweatshirt_mit_hellem_Ornament.jpg",
+   "license": "Public domain",
+   "author": "Dan-yell",
+   "size": [
+    377,
+    461
+   ],
+   "license_url": "",
+   "file": "longsleeve1-front.jpg"
+  },
+  "skirt1": {
+   "title": "File:Microskirt2.jpg",
+   "source": "https://commons.wikimedia.org/wiki/File:Microskirt2.jpg",
+   "license": "CC BY-SA 3.0",
+   "author": "user:Safedom",
+   "size": [
+    425,
+    425
+   ],
+   "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+   "file": "skirt1-front.jpg"
+  },
+  "pants1": {
+   "title": "File:Jeans Gul&Blå i modellen Dallas.jpg",
+   "source": "https://commons.wikimedia.org/wiki/File:Jeans_Gul%26Bl%C3%A5_i_modellen_Dallas.jpg",
+   "license": "CC BY-SA 4.0",
+   "author": "Eriksson Elisabeth",
+   "size": [
+    790,
+    1240
+   ],
+   "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+   "file": "pants1-front.jpg"
+  },
+  "pants2": {
+   "title": "File:Trainingpants.jpg",
+   "source": "https://commons.wikimedia.org/wiki/File:Trainingpants.jpg",
+   "license": "CC BY-SA 3.0",
+   "author": "Kuha455405",
+   "size": [
+    1200,
+    1600
+   ],
+   "license_url": "http://creativecommons.org/licenses/by-sa/3.0/",
+   "file": "pants2-front.jpg"
+  }
+ }
+}

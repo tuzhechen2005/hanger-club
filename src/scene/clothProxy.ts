@@ -73,6 +73,31 @@ export const JERSEY_TEE: ClothProfile = {
   radius: 0.018,
 }
 
+/** Jersey long sleeve: the tee's fabric, but its long sleeves need more shape keeping. */
+export const LONGSLEEVE_JERSEY: ClothProfile = { ...JERSEY_TEE, goalHem: 0.06, shape: 0.5, maxOffset: 0.1 }
+
+/** Heavy brushed fleece hoodie: hangs heavier, swings less, holds its shape. */
+export const FLEECE_HOODIE: ClothProfile = { ...JERSEY_TEE, cell: 0.046, radius: 0.02, goalTop: 0.36, goalHem: 0.07, damping: 0.93, airDrag: 0.006, shape: 0.45, bend: 0.8 }
+
+/** Light nylon shell jacket: stiff, crisp panels, more air drag. */
+export const NYLON_SHELL: ClothProfile = { ...JERSEY_TEE, cell: 0.048, radius: 0.021, goalTop: 0.36, goalHem: 0.065, damping: 0.94, airDrag: 0.008, shape: 0.5, bend: 0.85 }
+
+/** Denim skirt on a clip hanger: stiff, short, barely sways. */
+export const DENIM_SKIRT: ClothProfile = { ...JERSEY_TEE, goalTop: 0.35, goalHem: 0.07, shape: 0.45, bend: 0.9, maxOffset: 0.07 }
+
+/** Trousers on a clip hanger: long legs that swing from the waistband. */
+export const TROUSERS: ClothProfile = { ...JERSEY_TEE, goalHem: 0.05, damping: 0.94, shape: 0.4, bend: 0.75, maxOffset: 0.1 }
+
+/** Fabric profile for each garment kind (docs/cloth-motion.md §6). */
+export const PROFILES: Record<string, ClothProfile> = {
+  tee: JERSEY_TEE,
+  longsleeve: LONGSLEEVE_JERSEY,
+  hoodie: FLEECE_HOODIE,
+  shell: NYLON_SHELL,
+  skirt: DENIM_SKIRT,
+  pants: TROUSERS,
+}
+
 /** The same fabric on a coarser proxy, for devices that cannot keep up (about half the cost). */
 export function coarser(profile: ClothProfile): ClothProfile {
   return { ...profile, cell: profile.cell * 1.35, radius: profile.radius * 1.35 }
@@ -508,50 +533,61 @@ export class ClothSim {
   private boxes: Float32Array
   /** Garments bent enough last frame that their front could meet their back. */
   private deformed: boolean[]
+  /** Garments at rest whose zero offsets are already uploaded. */
+  private zeroed: boolean[]
   private offsets: Float32Array
   private smoothed: Float32Array
 
-  constructor(
-    readonly topology: ProxyTopology,
-    readonly garments: number,
-  ) {
-    const n = topology.count
-    const rows = Math.ceil(n / topology.textureWidth)
-    this.textures = Array.from({ length: garments }, () => {
-      const t = new THREE.DataTexture(new Float32Array(topology.textureWidth * rows * 4), topology.textureWidth, rows, THREE.RGBAFormat, THREE.FloatType)
-      t.needsUpdate = true
-      return t
-    })
-    this.gradients = Array.from({ length: garments }, () => {
-      const t = new THREE.DataTexture(new Float32Array(topology.textureWidth * 3 * rows * 4), topology.textureWidth * 3, rows, THREE.RGBAFormat, THREE.FloatType)
-      t.needsUpdate = true
-      return t
-    })
-    this.x = Array.from({ length: garments }, () => new Float32Array(n * 3))
-    this.prev = Array.from({ length: garments }, () => new Float32Array(n * 3))
-    this.target = Array.from({ length: garments }, () => new Float32Array(n * 3))
-    this.lastTarget = Array.from({ length: garments }, () => new Float32Array(n * 3))
-    this.lastBody = Array.from({ length: garments }, () => new THREE.Matrix4())
-    const regionCount = topology.regionStart.length - 1
-    this.regionRotation = Array.from({ length: garments }, () => {
+  /** Proxy structure per garment; garments of the same kind share one object. */
+  readonly topologies: ProxyTopology[]
+  readonly garments: number
+  /** Flat index of each garment's first particle in the collision tables. */
+  private base: Int32Array
+  /** Hash cell size: the largest contact distance (two radii) of any garment. */
+  private reach: number
+
+  constructor(topologies: ProxyTopology[]) {
+    this.topologies = topologies
+    const garments = (this.garments = topologies.length)
+    this.base = new Int32Array(garments + 1)
+    topologies.forEach((t, g) => (this.base[g + 1] = this.base[g] + t.count))
+    const total = this.base[garments]
+    const largest = Math.max(...topologies.map((t) => t.count))
+    this.reach = 2 * Math.max(...topologies.map((t) => t.profile.radius))
+    const texture = (t: ProxyTopology, columns: number) => {
+      const rows = Math.ceil(t.count / t.textureWidth)
+      const tex = new THREE.DataTexture(new Float32Array(t.textureWidth * columns * rows * 4), t.textureWidth * columns, rows, THREE.RGBAFormat, THREE.FloatType)
+      tex.needsUpdate = true
+      return tex
+    }
+    this.textures = topologies.map((t) => texture(t, 1))
+    this.gradients = topologies.map((t) => texture(t, 3))
+    this.x = topologies.map((t) => new Float32Array(t.count * 3))
+    this.prev = topologies.map((t) => new Float32Array(t.count * 3))
+    this.target = topologies.map((t) => new Float32Array(t.count * 3))
+    this.lastTarget = topologies.map((t) => new Float32Array(t.count * 3))
+    this.lastBody = topologies.map(() => new THREE.Matrix4())
+    this.regionRotation = topologies.map((t) => {
+      const regionCount = t.regionStart.length - 1
       const q = new Float32Array(regionCount * 4)
       for (let r = 0; r < regionCount; r++) q[r * 4 + 3] = 1
       return q
     })
     this.anchor = new Float32Array(garments * 3).fill(NaN)
-    this.cellEntries = new Int32Array(n * garments)
-    this.garmentOf = new Int32Array(n * garments)
-    this.particleOf = new Int32Array(n * garments)
-    this.touched = new Uint8Array(n * garments)
-    this.candidates = new Int32Array(n * garments)
+    this.cellEntries = new Int32Array(total)
+    this.garmentOf = new Int32Array(total)
+    this.particleOf = new Int32Array(total)
+    this.touched = new Uint8Array(total)
+    this.candidates = new Int32Array(total)
     this.boxes = new Float32Array(garments * 6)
-    this.deformed = Array.from({ length: garments }, () => false)
-    this.offsets = new Float32Array(n * 3)
-    this.smoothed = new Float32Array(n * 3)
+    this.deformed = topologies.map(() => false)
+    this.zeroed = topologies.map(() => false)
+    this.offsets = new Float32Array(largest * 3)
+    this.smoothed = new Float32Array(largest * 3)
     for (let g = 0; g < garments; g++) {
-      for (let i = 0; i < n; i++) {
-        this.garmentOf[g * n + i] = g
-        this.particleOf[g * n + i] = i
+      for (let i = 0; i < topologies[g].count; i++) {
+        this.garmentOf[this.base[g] + i] = g
+        this.particleOf[this.base[g] + i] = i
       }
     }
   }
@@ -573,7 +609,6 @@ export class ClothSim {
    * layout turning garments side-on. Returns true while moving.
    */
   step(dt: number, bodies: THREE.Matrix4[], follow: boolean[], inertia?: number[]) {
-    const { count: n, rest, profile } = this.topology
     // Fixed 1/60 s steps from accumulated time: a 120 Hz display steps every other frame
     // instead of running the cloth at double speed.
     this.clock = Math.min(this.clock + dt, 1 / 20)
@@ -586,6 +621,7 @@ export class ClothSim {
 
     // Goals in world space; a hanger that jumps (switch teleport) resets its cloth.
     for (let g = 0; g < this.garments; g++) {
+      const { count: n, rest } = this.topologies[g]
       const t = this.target[g]
       const m = bodies[g]
       const e = m.elements
@@ -619,12 +655,13 @@ export class ClothSim {
       const along = (s + 1) / substeps
       for (let g = 0; g < this.garments; g++) {
         if (follow[g]) continue
+        const { count: n, goal, profile } = this.topologies[g]
         const x = this.x[g]
         const p = this.prev[g]
         const t = this.target[g]
         const last = this.lastTarget[g]
         for (let i = 0; i < n; i++) {
-          const k = this.topology.goal[i]
+          const k = goal[i]
           const j = i * 3
           // Velocity relative to the hanger (goal velocity) is what damps.
           const gx = (t[j] - last[j]) / substeps
@@ -651,20 +688,22 @@ export class ClothSim {
       for (let it = 0; it < ITERATIONS; it++) {
         for (let g = 0; g < this.garments; g++) {
           if (follow[g]) continue
+          const T = this.topologies[g]
           if (it === 0) this.solveShape(g, along)
-          this.solveEdges(g, this.topology.edges, this.topology.restLength, 1)
-          if (it === 0) this.solveEdges(g, this.topology.bendEdges, this.topology.bendLength, profile.bend)
+          this.solveEdges(g, T.edges, T.restLength, 1)
+          if (it === 0) this.solveEdges(g, T.bendEdges, T.bendLength, T.profile.bend)
         }
         // Contacts once per step, last, so the drawn cloth is free of contact at these speeds.
         if (it === ITERATIONS - 1) this.solveCollisions(follow)
       }
       for (let g = 0; g < this.garments; g++) {
+        const n = this.topologies[g].count
         const x = this.x[g]
         const p = this.prev[g]
         for (let i = 0; i < n; i++) {
           // Cloth pressed against cloth: friction eats the velocity that the edge
           // constraints would otherwise keep re-injecting against the contact.
-          if (this.touched[g * n + i]) {
+          if (this.touched[this.base[g] + i]) {
             for (let c = 0; c < 3; c++) p[i * 3 + c] = x[i * 3 + c] - (x[i * 3 + c] - p[i * 3 + c]) * CONTACT_KEEP
           }
           for (let c = 0; c < 3; c++) speed = Math.max(speed, Math.abs(x[i * 3 + c] - p[i * 3 + c]))
@@ -677,11 +716,14 @@ export class ClothSim {
     // Offsets back into each garment's body space, smoothed over the proxy so neighbouring
     // particles never tear the render mesh, then uploaded for the vertex shader.
     const inverse = new THREE.Matrix4()
-    const { adjStart, adjacency, invMass } = this.topology
     const raw = this.offsets
     const smooth = this.smoothed
     let offsetChange = 0
     for (let g = 0; g < this.garments; g++) {
+      // A resting garment's offsets are all zero: upload them once, then skip it.
+      if (follow[g] && this.zeroed[g]) continue
+      this.zeroed[g] = follow[g]
+      const { count: n, adjStart, adjacency, invMass, profile } = this.topologies[g]
       inverse.copy(bodies[g]).invert()
       const x = this.x[g]
       const t = this.target[g]
@@ -732,7 +774,7 @@ export class ClothSim {
   }
 
   private solveEdges(g: number, edges: Uint32Array, restLength: Float32Array, stiffness: number) {
-    const { invMass } = this.topology
+    const { invMass } = this.topologies[g]
     const x = this.x[g]
     for (let e = 0; e < restLength.length; e++) {
       const i = edges[e * 2]
@@ -761,7 +803,7 @@ export class ClothSim {
    * differentiating the interpolated offsets) keeps shading smooth between particles.
    */
   private writeGradients(g: number, offsets: Float32Array) {
-    const { count: n, rest, adjStart, adjacency, covInverse } = this.topology
+    const { count: n, rest, adjStart, adjacency, covInverse } = this.topologies[g]
     const out = this.gradients[g].image.data as Float32Array
     for (let i = 0; i < n; i++) {
       // B = Σ (o_j - o_i)(r_j - r_i)ᵀ, row-major b[r][c].
@@ -798,9 +840,9 @@ export class ClothSim {
    * previous positions and last goals alike), so only the rest acts as inertia.
    */
   private carry(g: number, body: THREE.Matrix4, scale: number) {
-    const n = this.topology.count
-    const { maxInertialStep } = this.topology.profile
-    const inertia = this.topology.profile.inertia * scale
+    const { count: n, profile } = this.topologies[g]
+    const { maxInertialStep } = profile
+    const inertia = profile.inertia * scale
     const t = this.target[g]
     const last = this.lastTarget[g]
     let move = 0
@@ -832,7 +874,7 @@ export class ClothSim {
    * rotation comes from a few warm-started iterations of Müller et al. 2016.
    */
   private solveShape(g: number, along: number) {
-    const { regionStart, regions, invMass, profile } = this.topology
+    const { regionStart, regions, invMass, profile } = this.topologies[g]
     const x = this.x[g]
     const t = this.target[g]
     const last = this.lastTarget[g]
@@ -919,7 +961,7 @@ export class ClothSim {
   }
 
   private hash(x: number, y: number, z: number) {
-    const size = 2 * this.topology.profile.radius
+    const size = this.reach
     return this.cellHash(Math.floor(x / size), Math.floor(y / size), Math.floor(z / size))
   }
 
@@ -928,13 +970,12 @@ export class ClothSim {
    * garment when they started further apart (front panel meeting the back panel).
    */
   private solveCollisions(follow: boolean[]) {
-    const n = this.topology.count
-    const { invMass, rest } = this.topology
-    const reach = 2 * this.topology.profile.radius
+    const reach = this.reach
     // Broad phase: only particles inside the overlap of two garments' boxes can meet another
     // garment; a garment's own panels only meet when it is bent.
     const box = this.boxes
     for (let g = 0; g < this.garments; g++) {
+      const n = this.topologies[g].count
       const x = this.x[g]
       box[g * 6] = box[g * 6 + 1] = box[g * 6 + 2] = Infinity
       box[g * 6 + 3] = box[g * 6 + 4] = box[g * 6 + 5] = -Infinity
@@ -951,12 +992,14 @@ export class ClothSim {
       box[a * 6 + 2] - reach < box[b * 6 + 5] && box[b * 6 + 2] - reach < box[a * 6 + 5]
     let total = 0
     for (let g = 0; g < this.garments; g++) {
+      // A resting (follow) garment only matters where it touches a live one.
       const others: number[] = []
-      for (let h = 0; h < this.garments; h++) if (h !== g && overlaps(g, h)) others.push(h)
-      if (!others.length && !this.deformed[g]) continue
+      for (let h = 0; h < this.garments; h++) if (h !== g && !(follow[g] && follow[h]) && overlaps(g, h)) others.push(h)
+      if (!others.length && (follow[g] || !this.deformed[g])) continue
+      const n = this.topologies[g].count
       const x = this.x[g]
       for (let i = 0; i < n; i++) {
-        let take = this.deformed[g]
+        let take = this.deformed[g] && !follow[g]
         for (let o = 0; o < others.length && !take; o++) {
           const h = others[o]
           take =
@@ -964,7 +1007,7 @@ export class ClothSim {
             x[i * 3 + 1] > box[h * 6 + 1] - reach && x[i * 3 + 1] < box[h * 6 + 4] + reach &&
             x[i * 3 + 2] > box[h * 6 + 2] - reach && x[i * 3 + 2] < box[h * 6 + 5] + reach
         }
-        if (take) this.candidates[total++] = g * n + i
+        if (take) this.candidates[total++] = this.base[g] + i
       }
     }
     if (!total) return
@@ -988,7 +1031,8 @@ export class ClothSim {
       const ga = this.garmentOf[k]
       const ia = this.particleOf[k]
       const xa = this.x[ga]
-      const wa = follow[ga] ? 0 : invMass[ia]
+      const ta = this.topologies[ga]
+      const wa = follow[ga] ? 0 : ta.invMass[ia]
       const cx = Math.floor(xa[ia * 3] / reach)
       const cy = Math.floor(xa[ia * 3 + 1] / reach)
       const cz = Math.floor(xa[ia * 3 + 2] / reach)
@@ -1002,24 +1046,28 @@ export class ClothSim {
           const gb = this.garmentOf[kb]
           if (own && kb <= k) continue
           const ib = this.particleOf[kb]
+          const tb = this.topologies[gb]
+          // Contact distance for this pair: one radius from each side.
+          const contact = ta.profile.radius + tb.profile.radius
           if (gb === ga) {
             if (ib === ia || !this.deformed[ga]) continue
+            const rest = ta.rest
             const rx = rest[ib * 3] - rest[ia * 3]
             const ry = rest[ib * 3 + 1] - rest[ia * 3 + 1]
             const rz = rest[ib * 3 + 2] - rest[ia * 3 + 2]
-            if (rx * rx + ry * ry + rz * rz <= reach * reach) continue
+            if (rx * rx + ry * ry + rz * rz <= contact * contact) continue
           }
           const xb = this.x[gb]
-          const wb = follow[gb] ? 0 : invMass[ib]
+          const wb = follow[gb] ? 0 : tb.invMass[ib]
           const w = wa + wb
           if (w === 0) continue
           const dx = xb[ib * 3] - xa[ia * 3]
           const dy = xb[ib * 3 + 1] - xa[ia * 3 + 1]
           const dz = xb[ib * 3 + 2] - xa[ia * 3 + 2]
           const d2 = dx * dx + dy * dy + dz * dz
-          if (d2 >= reach * reach) continue
+          if (d2 >= contact * contact) continue
           const d = Math.sqrt(d2) || 1e-9
-          const c = ((reach - d) / d / w) * CONTACT_RELAX
+          const c = ((contact - d) / d / w) * CONTACT_RELAX
           // Inelastic contact: move positions and previous positions together, so a
           // push separates the cloth without turning into bounce (packed garments sit
           // in permanent contact and would otherwise jitter forever).

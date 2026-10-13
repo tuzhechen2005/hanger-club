@@ -24,6 +24,10 @@ python tools/blender/make_report.py
 每步实际耗时、命令、逐项结果与已知问题汇总在 `assets-src/reports/tee/report.json` 和 `checklist.md`。
 脚本内部耗时包含自身渲染。改变版型后必须重新生成贴图、动画和验收材料。
 
+## 其他衣服类型
+
+长袖、卫衣、冲锋衣、裙子、裤子用 `build_garment.py --kind <kind>` 构建，之后的烘焙、检查和导出与 T 恤相同（`bake_clips.py --kind <kind>`）。步骤和参数见 `docs/garment-kinds.md`。
+
 ## 当前方案：`gravity`（默认）
 
 `build_tee.py` 与 `bake_clips.py` 的默认参数就是正式资产所用参数，上面的命令不需要额外参数。

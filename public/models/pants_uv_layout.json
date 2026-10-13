@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "kind": "pants",
+  "units": "m",
+  "uv_origin": "bottom_left",
+  "texture_size": [
+    2048,
+    2048
+  ],
+  "uv_per_meter": 0.923076923076923,
+  "dimensions": {
+    "family": "bottom",
+    "length_m": 1.02,
+    "waist_flat_m": 0.39,
+    "hip_flat_m": 0.52,
+    "rise_m": 0.29,
+    "leg_hem_flat_m": 0.2,
+    "band_m": 0.04,
+    "mass": 0.05,
+    "bend": 3.5,
+    "drape_support": 0.18
+  },
+  "islands": [
+    {
+      "name": "front",
+      "rect": [
+        0.0,
+        0.01,
+        0.48,
+        0.9515384615384616
+      ],
+      "physical_size_m": [
+        0.52,
+        1.02
+      ]
+    },
+    {
+      "name": "back",
+      "rect": [
+        0.51,
+        0.01,
+        0.99,
+        0.9515384615384616
+      ],
+      "physical_size_m": [
+        0.52,
+        1.02
+      ]
+    }
+  ],
+  "stitch_paths_uv": [],
+  "notes": "Islands share one isotropic density; unused margins are intentional."
+}

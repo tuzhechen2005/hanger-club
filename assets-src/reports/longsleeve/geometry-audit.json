@@ -1,0 +1,1217 @@
+{
+  "sample_count": 67,
+  "hanger_probe_count_per_sample": 30296,
+  "hanger_penetration_probe_total": 0,
+  "surface_crossing_pair_total": 0,
+  "all_sampled_checks_pass": true,
+  "method": "Sample all baked poses for hanger penetration and surface intersections.\n\nNearest signed surface distance checks vertices and triangle centroids. It is\nnot a proof that an unsampled continuous-time mesh never intersects. The self\ncheck uses BVH candidates followed by finite segment/triangle intersections;\ncoplanar contacts and adjacent triangles are deliberately excluded.\n",
+  "elapsed_seconds": 2.953,
+  "frames": [
+    {
+      "sample": 0,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 1,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 2,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 3,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 4,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 5,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 6,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 7,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 8,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 9,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 10,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 11,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 12,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 13,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 14,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 15,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 16,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 17,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 18,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 19,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 20,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 21,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 22,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 23,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 24,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 25,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 26,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 27,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 28,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 29,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 30,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 31,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 32,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 33,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 34,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 35,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 36,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 37,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 38,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 39,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 40,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 41,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 42,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 43,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 44,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 45,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 46,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 47,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 48,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 49,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 50,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 51,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 52,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 53,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 54,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 55,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 56,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 57,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 58,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 59,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 60,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 61,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 62,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 63,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 64,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 65,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    },
+    {
+      "sample": 66,
+      "hanger": {
+        "HangerWood": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        },
+        "HangerHook": {
+          "probes_inside_over_0_2mm": 0,
+          "max_depth_m": 0.0,
+          "example_inside_points": []
+        }
+      },
+      "nonadjacent_surface_crossings": 0,
+      "example_triangle_pairs": [],
+      "crossing_bounds_blender_m": null
+    }
+  ]
+}

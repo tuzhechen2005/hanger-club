@@ -27,15 +27,22 @@ export interface Framing {
   browseWidth: number
 }
 
-export function computeFraming(aspect: number): Framing {
+/**
+ * `browseBottom`: the lowest hem on the rail (the longest garment must fit above the ticket).
+ * `inspectBottom`: the hem of the piece in the close-up, so trousers and tees both fill it.
+ */
+export function computeFraming(aspect: number, browseBottom = GARMENT_BOTTOM, inspectBottom = GARMENT_BOTTOM): Framing {
   const portrait = aspect < 0.8
-  // Landscape frames the rail closer: the garments are the point, not the empty wall.
-  const browseHeight = portrait ? Math.max(2.35 / aspect, 2.5) : Math.max(2.35 / aspect, 2.05)
   const railFrac = portrait ? 0.38 : 0.25
+  // Landscape frames the rail closer: the garments are the point, not the empty wall. The
+  // view still has to hold the longest hem with room for the ticket under it.
+  const fitBrowse = (-browseBottom + 0.12) / (portrait ? 0.42 : 0.5)
+  const browseHeight = portrait ? Math.max(2.35 / aspect, 2.5, fitBrowse) : Math.max(2.35 / aspect, 2.05, fitBrowse)
   const browseY = (railFrac - 0.5) * browseHeight
 
-  const inspectHeight = Math.max(1.3 / aspect, 1.8)
-  const centre = INSPECT_Y + (GARMENT_BOTTOM - 0.08) / 2
+  const span = -inspectBottom + 0.1
+  const inspectHeight = portrait ? Math.max(1.3 / aspect, 1.8, span / 0.46) : Math.max(1.8, span / 0.72)
+  const centre = INSPECT_Y + (inspectBottom - 0.08) / 2
   const centreFrac = portrait ? 0.33 : 0.36
   const inspectY = centre + (centreFrac - 0.5) * inspectHeight
 
@@ -47,8 +54,8 @@ export function computeFraming(aspect: number): Framing {
   return {
     browse,
     inspect,
-    browseInfo: frac(GARMENT_BOTTOM - 0.06, browse),
-    inspectInfo: frac(INSPECT_Y + GARMENT_BOTTOM - 0.06, inspect),
+    browseInfo: frac(browseBottom - 0.06, browse),
+    inspectInfo: frac(INSPECT_Y + inspectBottom - 0.06, inspect),
     browseWidth: browseHeight * aspect,
   }
 }

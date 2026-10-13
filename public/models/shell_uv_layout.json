@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "kind": "shell",
+  "units": "m",
+  "uv_origin": "bottom_left",
+  "texture_size": [
+    2048,
+    2048
+  ],
+  "uv_per_meter": 0.48437500000000006,
+  "dimensions": {
+    "family": "top",
+    "length_m": 0.8,
+    "chest_flat_m": 0.64,
+    "hem_flat_m": 0.62,
+    "armhole_m": 0.29,
+    "sleeve_m": 0.66,
+    "sleeve_opening_m": 0.21,
+    "sleeve_angle": 7,
+    "rib_width_m": 0.02,
+    "hood": {
+      "length_m": 0.36,
+      "half_width_m": 0.17,
+      "thickness_m": 0.013
+    },
+    "mass": 0.03,
+    "bend": 4.0,
+    "drape_support": 0.18,
+    "sleeve_support": 2.2
+  },
+  "islands": [
+    {
+      "name": "front",
+      "rect": [
+        0.0,
+        0.44,
+        0.31000000000000005,
+        0.8275000000000001
+      ],
+      "physical_size_m": [
+        0.64,
+        0.8
+      ]
+    },
+    {
+      "name": "back",
+      "rect": [
+        0.52,
+        0.44,
+        0.8300000000000001,
+        0.8275000000000001
+      ],
+      "physical_size_m": [
+        0.64,
+        0.8
+      ]
+    },
+    {
+      "name": "sleeve_left",
+      "rect": [
+        0.0,
+        0.0,
+        0.25473737719724565,
+        0.31968750000000007
+      ],
+      "physical_size_m": [
+        0.5259094238910877,
+        0.66
+      ]
+    },
+    {
+      "name": "sleeve_right",
+      "rect": [
+        0.33,
+        0.0,
+        0.5847373771972457,
+        0.31968750000000007
+      ],
+      "physical_size_m": [
+        0.5259094238910877,
+        0.66
+      ]
+    },
+    {
+      "name": "hood",
+      "rect": [
+        0.67,
+        0.0,
+        1.0,
+        0.224375
+      ],
+      "physical_size_m": [
+        0.34,
+        0.36
+      ]
+    },
+    {
+      "name": "collar_rib",
+      "rect": [
+        0.67,
+        0.42,
+        0.9294414113686671,
+        0.4296875
+      ],
+      "physical_size_m": [
+        0.5356209783095063,
+        0.02
+      ]
+    }
+  ],
+  "stitch_paths_uv": [],
+  "notes": "Islands share one isotropic density; unused margins are intentional."
+}

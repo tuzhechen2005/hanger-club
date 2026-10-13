@@ -1,0 +1,50 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "kind": "pants",
+  "dimensions": {
+    "family": "bottom",
+    "length_m": 1.02,
+    "waist_flat_m": 0.39,
+    "hip_flat_m": 0.52,
+    "rise_m": 0.29,
+    "leg_hem_flat_m": 0.2,
+    "band_m": 0.04,
+    "mass": 0.05,
+    "bend": 3.5,
+    "drape_support": 0.18
+  },
+  "single_layer_vertices": 4399,
+  "garment": {
+    "vertices": 8798,
+    "triangles": 17600,
+    "bounds_blender_m": {
+      "min": [
+        -0.2593848705291748,
+        -0.03208139166235924,
+        -1.1202143430709839
+      ],
+      "max": [
+        0.25990238785743713,
+        0.03285500407218933,
+        -0.09515184164047241
+      ]
+    }
+  },
+  "pattern_pieces": [
+    "back",
+    "front"
+  ],
+  "settle_frames": 288,
+  "last_frame_max_velocity_m_s": 0.07515329122543335,
+  "start_vertices_pushed_off_hanger": 24,
+  "crease_relaxation": {
+    "iterations": 2,
+    "max_vertex_shift_m": 0.008198794908821583
+  },
+  "extent_m": {
+    "width": 0.5172877311706543,
+    "depth": 0.06293760240077972,
+    "height": 1.0250436067581177
+  },
+  "elapsed_seconds": 91.07
+}

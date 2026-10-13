@@ -4,6 +4,7 @@
 //
 //   npm run cloth:check                      # http://127.0.0.1:5173/
 //   CHROME=/path/to/chrome npm run cloth:check -- http://localhost:5174/
+//   PIECE=4 npm run cloth:check              # lift another piece (default 0, the jersey tee)
 //
 // Exits 1 if any target is missed. Numbers are from this machine: on a phone the
 // simulation time will be several times higher.
@@ -25,12 +26,16 @@ const TARGETS = {
   simMedianMs: 5.0,
 }
 
+// Long sleeves and trouser legs flare further in a fast hand turn than a tee; their limit stays
+// under their fabric profile's offset cap (8–10 cm), so the motion is never clipped.
+const TURN_LIMIT = { tee: 7, skirt: 7, longsleeve: 9, hoodie: 8, shell: 8, pants: 8 }
+
 const browser = await chromium.launch({ executablePath: chrome, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
 const page = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: false })
 const errors = []
 page.on('pageerror', (e) => errors.push(e.message))
 await page.goto(url, { waitUntil: 'networkidle' })
-await page.waitForFunction(() => window.__sim && window.__rig?.bakedClips, null, { timeout: 20000 })
+await page.waitForFunction(() => window.__sim && window.__rig?.bakedClips, null, { timeout: 60000 })
 await page.waitForTimeout(3000)
 
 // Per frame: each garment's 95th-percentile offset (m), the mode and the simulation time.
@@ -43,10 +48,10 @@ await page.evaluate(() => {
     const start = performance.now()
     const active = step(...args)
     const ms = performance.now() - start
-    const p95 = sim.textures.map((t) => {
+    const p95 = sim.textures.map((t, g) => {
       const d = t.image.data
       const a = []
-      for (let i = 0; i < sim.topology.count * 4; i += 4) a.push(Math.hypot(d[i], d[i + 1], d[i + 2]))
+      for (let i = 0; i < sim.topologies[g].count * 4; i += 4) a.push(Math.hypot(d[i], d[i + 1], d[i + 2]))
       a.sort((x, y) => x - y)
       return a[Math.floor(a.length * 0.95)]
     })
@@ -71,9 +76,9 @@ const settle = (log, pick) => {
 const rest = await page.evaluate(() => {
   const sim = window.__sim
   let max = 0
-  for (const t of sim.textures) {
+  for (const [g, t] of sim.textures.entries()) {
     const d = t.image.data
-    for (let i = 0; i < sim.topology.count * 4; i += 4) max = Math.max(max, Math.hypot(d[i], d[i + 1], d[i + 2]))
+    for (let i = 0; i < sim.topologies[g].count * 4; i += 4) max = Math.max(max, Math.hypot(d[i], d[i + 1], d[i + 2]))
   }
   return max * 100
 })
@@ -90,7 +95,14 @@ await page.waitForTimeout(3000)
 const swipe = await take()
 const all = (e) => Math.max(...e.p95)
 
-// Lift with its 360° turn, then a fast hand turn in the close-up.
+// Lift with its 360° turn, then a fast hand turn in the close-up. The targets are set on the
+// jersey tee (piece 0); PIECE=<index> checks another garment against the same numbers.
+const piece = Number(process.env.PIECE ?? 0)
+const kind = await page.evaluate(async (i) => (await import('/src/data/products.ts')).products[i].kind, piece)
+TARGETS.turnPeakCm = TURN_LIMIT[kind] ?? TARGETS.turnPeakCm
+await page.evaluate((i) => window.__rig.select(i), piece)
+await page.waitForTimeout(1800)
+await take()
 await page.evaluate(() => window.__rig.lift())
 await page.waitForTimeout(3500)
 const lift = await take()
@@ -111,6 +123,9 @@ await take()
 await page.waitForTimeout(1500)
 const idle = (await take()).length
 
+// The hook above is an anonymous arrow; the class method is named "step".
+const replaced = await page.evaluate(() => window.__sim.step.name === 'step')
+if (replaced) errors.push('the scene replaced its cloth simulation mid-run (slow-device fallback?)')
 const times = [...swipe, ...lift, ...turn].map((e) => e.ms).sort((a, b) => a - b)
 const results = {
   loadIdleSteps: loadIdle,
@@ -138,6 +153,7 @@ const checks = [
   ['每帧模拟中位数 (ms)', results.simMedianMs, results.simMedianMs <= TARGETS.simMedianMs, `≤ ${TARGETS.simMedianMs}`],
   ['每帧模拟 p95 (ms)', results.simP95Ms, true, '记录'],
 ]
+console.log(`piece ${piece} (${kind})`)
 for (const [name, value, ok, target] of checks) console.log(`${ok ? 'PASS' : 'FAIL'}  ${name.padEnd(18)} ${Number(value).toFixed(2).padStart(7)}   目标 ${target}`)
 for (const e of errors) console.log(`PAGE ERROR  ${e}`)
 process.exit(checks.every(([, , ok]) => ok) && errors.length === 0 ? 0 : 1)

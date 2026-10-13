@@ -25,7 +25,7 @@ npm run cloth:check  # 开着 dev 服务器时，测量布料动态是否达标�
 ```
 
 Blender 资产管线见 `tools/blender/README.md`，资产规格见 `docs/asset-spec.md`。
-衣服动态的方法论、参数和验收标准见 `docs/cloth-motion.md`，接入新衣服时按它走。
+衣服动态的方法论、参数和验收标准见 `docs/cloth-motion.md`；新增衣服类型（找照片、抠图、版片、贴图细节、上架）见 `docs/garment-kinds.md`。
 
 `dist/` 是构建产物（已 gitignore），对应 `.openai/hosting.json` 的静态目录。发布到 Sites 前先 `npm run build`。
 
@@ -50,6 +50,7 @@ src/
   ui/                 购物袋、INDEX 面板、SVG 缩略图
 docs/asset-spec.md    Blender 资产与网页之间的契约
 docs/cloth-motion.md  衣服动态方法论：三层分工、接入步骤、参数、调参与验收
+docs/garment-kinds.md 新增衣服类型的步骤与踩过的坑
 tools/web/cloth-check.mjs  布料动态验收测量
 tools/web/export_photos.py 把 assets-src/photos 导出为近看页的原图（public/products/<slug>/photo-*.webp）
 docs/codex-blender-prompt.md  给 Codex 的建模任务
@@ -59,7 +60,7 @@ assets-src/photos/    商品照片（LFS）
 
 ## 现状与已知限制
 
-- **衣服模型**：来自 Blender 管线，6 款共用同一件 T 恤的网格。网页先加载 458 KB 的静态模型；带 66 帧布料形变的动画模型（2.2 MB）在后台加载，加载好后，取下和挂回会播放烘焙的布料动画。模型加载前、或者加载失败时，显示代码生成的占位 T 恤。
+- **衣服模型**：来自 Blender 管线，6 种类型（T 恤、长袖、卫衣、冲锋衣、裙子、裤子）各一个网格，同类商品共用；裙子和裤子用夹式衣架。网页先加载 458 KB 的静态模型；带 66 帧布料形变的动画模型（2.2 MB）在后台加载，加载好后，取下和挂回会播放烘焙的布料动画。模型加载前、或者加载失败时，显示代码生成的占位 T 恤。
 - **商品贴图**：只有 shirt3（Wood Label Tee）用的是管线做好的贴图，其余 5 款是浏览器里用照片粗略抠出的印花拼成的，仍是占位。
 - **动态**：
   - 取下和挂回播放 Blender 烘焙的布料动画。

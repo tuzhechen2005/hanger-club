@@ -1,0 +1,62 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "kind": "shell",
+  "dimensions": {
+    "family": "top",
+    "length_m": 0.8,
+    "chest_flat_m": 0.64,
+    "hem_flat_m": 0.62,
+    "armhole_m": 0.29,
+    "sleeve_m": 0.66,
+    "sleeve_opening_m": 0.21,
+    "sleeve_angle": 7,
+    "rib_width_m": 0.02,
+    "hood": {
+      "length_m": 0.36,
+      "half_width_m": 0.17,
+      "thickness_m": 0.013
+    },
+    "mass": 0.03,
+    "bend": 4.0,
+    "drape_support": 0.18,
+    "sleeve_support": 2.2
+  },
+  "single_layer_vertices": 6191,
+  "garment": {
+    "vertices": 12382,
+    "triangles": 24772,
+    "bounds_blender_m": {
+      "min": [
+        -0.5179745554924011,
+        -0.047195810824632645,
+        -0.9725637435913086
+      ],
+      "max": [
+        0.5166168212890625,
+        0.10199899971485138,
+        -0.07000081241130829
+      ]
+    }
+  },
+  "pattern_pieces": [
+    "back",
+    "collar_rib",
+    "front",
+    "hood",
+    "sleeve_left",
+    "sleeve_right"
+  ],
+  "settle_frames": 288,
+  "last_frame_max_velocity_m_s": 0.09337611496448517,
+  "start_vertices_pushed_off_hanger": 1,
+  "crease_relaxation": {
+    "iterations": 0,
+    "max_vertex_shift_m": 0.012474984861910343
+  },
+  "extent_m": {
+    "width": 1.0326685905456543,
+    "depth": 0.1472204327583313,
+    "height": 0.9014695882797241
+  },
+  "elapsed_seconds": 100.223
+}

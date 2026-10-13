@@ -1,5 +1,5 @@
 import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { MEASUREMENTS, products, SIZES } from './data/products'
+import { measurements, products, SIZES } from './data/products'
 import { rig } from './motion/rig'
 import { useUI } from './state/store'
 import { BagSheet, IndexSheet } from './ui/Sheets'
@@ -165,7 +165,7 @@ export default function App() {
   const browsing = mode === 'browse'
   const inspecting = mode === 'inspect' || mode === 'switching'
   const number = (i: number) => String(i + 1).padStart(2, '0')
-  const fit = MEASUREMENTS[size]
+  const fit = measurements(product.kind, size)
 
   return (
     <div className="app" data-mode={mode} style={{ '--tint': product.fabric } as CSSProperties}>
@@ -280,15 +280,11 @@ export default function App() {
               ))}
             </div>
             <p className="fit" aria-live="polite">
-              <span>
-                Chest <b>{fit.chest}</b>
-              </span>
-              <span>
-                Length <b>{fit.length}</b>
-              </span>
-              <span>
-                Sleeve <b>{fit.sleeve}</b>
-              </span>
+              {fit.map((m) => (
+                <span key={m.label}>
+                  {m.label} <b>{m.value}</b>
+                </span>
+              ))}
               <small>cm, laid flat</small>
             </p>
           </div>

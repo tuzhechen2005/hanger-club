@@ -1,0 +1,29 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "warmup_frames": 120,
+  "shape_targets": 66,
+  "clips": {
+    "lift": 1.5,
+    "return": 1.25
+  },
+  "relative_frame_vertex_max_velocities_m_s": {
+    "121": 0.00013075691822450608,
+    "157": 0.0011047350708395243,
+    "187": 0.00021770584862679243
+  },
+  "max_relative_displacement_m": 0.00877762958407402,
+  "crease_relaxation_max_shift_m": 0.0,
+  "motion_support": 0.8,
+  "motion_stiffness_while_moving": 0.3,
+  "return_settle_blend_frames": 8,
+  "clip_boundary_sample": "Both clips reference the same simulated sample 36 at the transition",
+  "return_end_base_rms_m": 0.0,
+  "return_end_base_max_m": 0.0,
+  "elapsed_seconds": 52.212,
+  "static_export_method": "Prune animation/target buffers from the exact animated GLB; base attributes and indices are unchanged",
+  "known_issues": [
+    "Solver parameters are tuned for visual medium cotton, not physically calibrated",
+    "Motion uses soft rest-shape restraints to keep the web transition controlled; it is not unrestrained cloth",
+    "Inspect end-pose residual motion and self-collision in rendered contact sheets before acceptance"
+  ]
+}
