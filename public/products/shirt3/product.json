@@ -1,0 +1,42 @@
+{
+  "slug": "shirt3",
+  "baseColorHex": "#4c3d37",
+  "basecolor": "basecolor.png",
+  "print_front": "print_front.png",
+  "print_back": "print_back.png",
+  "prints": {
+    "front": {
+      "hps_distance_m": 0.12556701030927836,
+      "width_m": 0.10353398058252428,
+      "height_m": 0.02092783505154639,
+      "centerline_offset_m": 0.004815533980582524,
+      "source_bbox_px": [
+        473,
+        201,
+        559,
+        230
+      ]
+    },
+    "back": null
+  },
+  "dimensions_source": "default",
+  "dimensions": {
+    "length_m": 0.7,
+    "chest_flat_m": 0.62,
+    "shoulder_m": 0.6,
+    "sleeve_m": 0.24,
+    "sleeve_opening_m": 0.24,
+    "hem_flat_m": 0.61,
+    "rib_width_m": 0.025
+  },
+  "photos": [
+    "shirt3-front.webp",
+    "shirt3-back.webp"
+  ],
+  "placement_method": "Inspected photo landmarks mapped separately in X/Y to default physical dimensions; not a measured garment",
+  "license": "Owner-supplied third-party branded product photos; private repository/private demonstration only",
+  "known_issues": [
+    "Embossed black logo is only about 84 source pixels wide; original low-contrast details are retained without reconstruction",
+    "Perspective/physical size estimates use supplied default dimensions; real measurements would improve accuracy"
+  ]
+}
