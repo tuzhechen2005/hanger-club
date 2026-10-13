@@ -1,0 +1,11 @@
+{
+  "blender_version": "5.2.1 LTS",
+  "elapsed_seconds": 33.006,
+  "source": "D:/个人资料/徐吉良/Documents/ChatGPT/HangerClub/assets-src/blender/tee_animated.blend",
+  "reimported_model": "D:/个人资料/徐吉良/Documents/ChatGPT/HangerClub/public/models/tee_anim.glb",
+  "lighting": "Original area-light studio; no external HDRI",
+  "product_texture": "shirt3",
+  "view_count": 6,
+  "clip_sample_interval_frames": 4,
+  "background_postprocess": "compose_reports.py composites alpha onto exact #ecebe4"
+}

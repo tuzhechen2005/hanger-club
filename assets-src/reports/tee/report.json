@@ -1,0 +1,273 @@
+{
+  "blender_version": "5.2.1 LTS",
+  "branch": "codex/blender-assets",
+  "acceptance": "Review build; structural/geometry evidence is separate from visual acceptance",
+  "dimensions": {
+    "length_m": 0.7,
+    "chest_flat_m": 0.62,
+    "shoulder_m": 0.6,
+    "sleeve_m": 0.24,
+    "sleeve_opening_m": 0.24,
+    "hem_flat_m": 0.61,
+    "rib_width_m": 0.025
+  },
+  "dimensions_source": "default",
+  "single_layer_vertices": 4446,
+  "validation": {
+    "checks": {
+      "static_has_no_morph_targets": true,
+      "same_primitive_count": true,
+      "base_attributes_identical": true,
+      "indices_identical": true,
+      "garment_vertices_at_most_10000": true,
+      "garment_triangles_at_most_20000": true,
+      "same_target_count_per_primitive": true,
+      "required_nodes": true,
+      "root_hierarchy": true,
+      "hanger_hierarchy": true,
+      "fabric_material_slots": true,
+      "front_uv_upright_and_nonmirrored": true,
+      "back_uv_upright_and_nonmirrored": true,
+      "front_faces_gltf_positive_z": true,
+      "animation_names": true,
+      "lift_starts_at_zero": true,
+      "lift_duration": true,
+      "lift_has_morph_animation": true,
+      "return_starts_at_zero": true,
+      "return_duration": true,
+      "return_has_morph_animation": true,
+      "clip_boundary_translation_continuous": true,
+      "clip_boundary_rotation_continuous": true,
+      "clip_boundary_weights_continuous": true,
+      "lift_has_full_turn_samples": true,
+      "shared_textures_2048": true,
+      "product_texture_not_embedded": true,
+      "Fabric_normal_and_orm": true,
+      "FabricInner_normal_and_orm": true
+    },
+    "all_structural_checks_pass": true,
+    "garment_gltf_vertices": 9495,
+    "garment_triangles": 17792,
+    "morph_targets": [
+      66
+    ],
+    "animations": {
+      "lift": {
+        "start_s": 0.0,
+        "end_s": 1.5,
+        "duration_s": 1.5
+      },
+      "return": {
+        "start_s": 0.0,
+        "end_s": 1.25,
+        "duration_s": 1.25
+      }
+    },
+    "embedded_images": [
+      {
+        "name": "tee_normal",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 1286138
+      },
+      {
+        "name": "tee_orm",
+        "size": [
+          2048,
+          2048
+        ],
+        "bytes": 1439351
+      },
+      {
+        "name": "WoodGrain",
+        "size": [
+          512,
+          512
+        ],
+        "bytes": 153884
+      }
+    ],
+    "uv_orientation": {
+      "front": {
+        "horizontal_uv_world_x_correlation": 0.9999752347779584,
+        "vertical_uv_world_y_correlation": 0.9999973740516346,
+        "mean_gltf_z_m": 0.05632176995277405
+      },
+      "back": {
+        "horizontal_uv_world_x_correlation": -0.9999759704565528,
+        "vertical_uv_world_y_correlation": 0.9999982437131252,
+        "mean_gltf_z_m": -0.056578826159238815
+      }
+    },
+    "bounds_gltf_m": {
+      "min": [
+        -0.47028523683547974,
+        -0.7860149145126343,
+        -0.08050373196601868
+      ],
+      "max": [
+        0.4698605239391327,
+        -0.07383818179368973,
+        0.08480408042669296
+      ]
+    },
+    "files": {
+      "tee.glb": {
+        "bytes": 3354156,
+        "sha256": "ca938a583595d7ddf8e8037cb9fcc082793d7fa7ef48a4bbc539d4572a777cbc"
+      },
+      "tee_anim.glb": {
+        "bytes": 18475652,
+        "sha256": "fd483fd95c3596eb75672041519fcb128466ef3600d3c1459e2eec45922fc45e"
+      }
+    },
+    "scope": "Structural GLB validation; collision, mirror correctness and visual quality require separate checks"
+  },
+  "animation": {
+    "blender_version": "5.2.1 LTS",
+    "warmup_frames": 72,
+    "shape_targets": 66,
+    "clips": {
+      "lift": 1.5,
+      "return": 1.25
+    },
+    "relative_frame_vertex_max_velocities_m_s": {
+      "73": 0.0040034218691289425,
+      "109": 0.00457189604640007,
+      "139": 0.005242808256298304
+    },
+    "max_relative_displacement_m": 0.025155194103717804,
+    "motion_support": 0.8,
+    "clip_boundary_sample": "Both clips reference the same simulated sample 36 at the transition",
+    "return_end_base_rms_m": 1.4660855413239915e-05,
+    "return_end_base_max_m": 0.0005096967797726393,
+    "elapsed_seconds": 22.547,
+    "static_export_method": "Prune animation/target buffers from the exact animated GLB; base attributes and indices are unchanged",
+    "known_issues": [
+      "Solver parameters are tuned for visual medium cotton, not physically calibrated",
+      "Motion uses soft rest-shape restraints to keep the web transition controlled; it is not unrestrained cloth",
+      "Inspect end-pose residual motion and self-collision in rendered contact sheets before acceptance"
+    ]
+  },
+  "geometry_audit_summary": {
+    "sample_count": 67,
+    "hanger_probe_count_per_sample": 26684,
+    "hanger_penetration_probe_total": 0,
+    "surface_crossing_pair_total": 0,
+    "all_sampled_checks_pass": true,
+    "method": "Sample all baked poses for hanger penetration and surface intersections.\n\nNearest signed surface distance checks vertices and triangle centroids. It is\nnot a proof that an unsampled continuous-time mesh never intersects. The self\ncheck uses BVH candidates followed by finite segment/triangle intersections;\ncoplanar contacts and adjacent triangles are deliberately excluded.\n",
+    "elapsed_seconds": 2.335
+  },
+  "pipeline": [
+    {
+      "step": "衣架",
+      "command": "blender -b --factory-startup --python-exit-code 1 -P tools/blender/build_hanger.py",
+      "elapsed_seconds": 4.096
+    },
+    {
+      "step": "垂落",
+      "command": "blender -b --factory-startup --python-exit-code 1 -P tools/blender/build_tee.py -- --frames 73 --bend 0.25 --drape-support 0.33",
+      "elapsed_seconds": 19.166
+    },
+    {
+      "step": "贴图",
+      "command": "python tools/blender/make_product_texture.py --slug shirt3",
+      "elapsed_seconds": 0.495
+    },
+    {
+      "step": "动画 / AO / 导出",
+      "command": "blender -b --factory-startup --python-exit-code 1 -P tools/blender/bake_clips.py -- --warmup 73 --motion-support 0.80",
+      "elapsed_seconds": 22.547
+    },
+    {
+      "step": "几何审计",
+      "command": "blender -b --factory-startup --python-exit-code 1 -P tools/blender/audit_geometry.py",
+      "elapsed_seconds": 2.335
+    },
+    {
+      "step": "渲染 / 重新导入",
+      "command": "blender -b --factory-startup --python-exit-code 1 -P tools/blender/render_checks.py",
+      "elapsed_seconds": 33.006
+    }
+  ],
+  "additional_commands": [
+    "python tools/blender/validate_assets.py",
+    "python tools/blender/compose_reports.py",
+    "python tools/blender/make_report.py"
+  ],
+  "checklist": [
+    {
+      "item": "背面文字不是镜像",
+      "status": "N/A: shirt3 背面无印花；前后 UV 均通过方向检查"
+    },
+    {
+      "item": "衣服不穿透衣架",
+      "status": "PASS",
+      "evidence": "geometry-audit.json；67 帧顶点与三角形中心采样，0.2 mm 阈值"
+    },
+    {
+      "item": "挂钩接触点在原点",
+      "status": "PASS: 内侧顶点在原点，顶部金属约 +4 mm；按已确认修正生成"
+    },
+    {
+      "item": "静态/动画顶点数和顺序一致",
+      "status": "PASS"
+    },
+    {
+      "item": "glTF 正面朝 +Z",
+      "status": "PASS"
+    },
+    {
+      "item": "动画名和节点名",
+      "status": "PASS"
+    },
+    {
+      "item": "印花物理尺寸与照片一致",
+      "status": "ESTIMATED: 按照片地标与默认尺寸映射，缺少实测，不能确认真实物理尺寸"
+    },
+    {
+      "item": "采样表面自交",
+      "status": "PASS",
+      "evidence": "非相邻面交叉累计 0 对，含跨帧重复"
+    },
+    {
+      "item": "目标视频视觉匹配",
+      "status": "REVIEW: 已按用户反馈减少细碎褶皱；尚未获用户外观验收"
+    }
+  ],
+  "sources": [
+    "Original parameterized five-piece garment and hanger geometry",
+    "Original wood texture, generated OpenGL jersey/seam normal, baked drape AO",
+    "Original studio area lights; no external HDRI/model",
+    "Owner-supplied branded shirt3 photos: private repository/demo only",
+    "Owner-supplied example_video.mp4: local reference only; not uploaded",
+    "Research citations and experiments: docs/blender-research.md"
+  ],
+  "known_issues": [
+    "Soft rest-shape constraints deliberately preserve the smooth silhouette; not unconstrained fabric physics",
+    "Cotton mass/stiffness are visually tuned and not physically calibrated",
+    "Rubber label source is approximately 84 pixels wide; original pixels retained without reconstructed text",
+    "Print placement uses default dimensions and photo perspective estimates",
+    "No store frontend integration: repository currently has no src/ implementation",
+    "Any failed geometry checks remain explicitly listed"
+  ],
+  "renders": [
+    "front.png",
+    "back.png",
+    "left.png",
+    "right.png",
+    "front-three-quarter.png",
+    "back-three-quarter.png",
+    "detail-neck.png",
+    "detail-cuff.png",
+    "detail-hem.png",
+    "static-contact-sheet.png",
+    "lift-contact-sheet.png",
+    "return-contact-sheet.png",
+    "reimport-front.png",
+    "reimport-three-quarter.png"
+  ],
+  "next_iteration": "Compare neckline roundness, cuff/hem curvature and shoulder silhouette against the supplied video; measure the real garment to validate print dimensions"
+}
