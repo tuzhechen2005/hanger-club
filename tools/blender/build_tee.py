@@ -14,6 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import *
 from build_hanger import build as build_hanger
 import numpy as np
+from mathutils.bvhtree import BVHTree
 
 DEFAULTS = dict(length_m=.70, chest_flat_m=.62, shoulder_m=.60,
                 sleeve_m=.24, sleeve_opening_m=.24, hem_flat_m=.61, rib_width_m=.025)
@@ -40,7 +41,7 @@ class PatternAssembly:
         self.face_parts.append(part)
 
 
-def build_patterns(dimensions, parent, profile="baseline"):
+def build_patterns(dimensions, parent, profile="baseline", drape_support=.45):
     d = dimensions
     pattern = PatternAssembly()
     columns, rows, arm_rows = 40, 40, 14
@@ -81,13 +82,14 @@ def build_patterns(dimensions, parent, profile="baseline"):
                 cross = max(0., 1 - (x0 / half) ** 2) ** .5
                 arm = .038 * math.sin(math.pi * k / arm_rows) if k <= arm_rows else 0.
                 y_bulk = sign * (.064 * cross + arm * (1 - cross))
-                top_blend = min(t / .18, 1)
+                top_blend = min(t / .06, 1)
                 y = y_top * (1 - top_blend) + y_bulk * top_blend
                 if j in (0, columns):
                     y = sign * arm
                 # A small deterministic asymmetry seeds physical buckling.
                 if 0 < k < rows and 0 < j < columns:
                     y += .001 * math.sin(x0 * 71 + k * .7) * math.sin(math.pi * t)
+                    y += .009 * math.sin(x0 * 28 + .4) * math.sin(math.pi * t / 2) * cross
                 x = x0 * (1 - t * (1 - d["hem_flat_m"] / d["chest_flat_m"]))
                 row.append(pattern.vertex((x, y, z)))
             grid.append(row)
@@ -121,8 +123,8 @@ def build_patterns(dimensions, parent, profile="baseline"):
         n = len(boundary)
         base = [Vector(pattern.vertices[i]) for i in boundary]
         center = sum(base, Vector()) / n
-        axis = Vector((sign * .78, 0, -.62578)).normalized()
-        cross = Vector((sign * .62578, 0, .78)).normalized()
+        axis = Vector((sign * .35, 0, -.9367497)).normalized()
+        cross = Vector((sign * .9367497, 0, .35)).normalized()
         ring_count = 12
         grid = [boundary]
         circumference = sum((base[(i + 1) % n] - base[i]).length for i in range(n))
@@ -134,8 +136,14 @@ def build_patterns(dimensions, parent, profile="baseline"):
             ring = []
             for i in range(n):
                 theta = math.tau * i / n
-                cuff = center + axis * d["sleeve_m"] + cross * (d["sleeve_opening_m"] / 2 * math.cos(theta))
-                cuff.y = -.038 * math.sin(theta)
+                # Flat cuff width is half the circumference, rather than the
+                # diameter of its assembled opening. Preserve that dimension
+                # while giving the hanging opening a gently oval cross-section.
+                a, b = .085, .068
+                perimeter = math.pi * (3 * (a + b) - math.sqrt((3 * a + b) * (a + 3 * b)))
+                scale = 2 * d["sleeve_opening_m"] / perimeter
+                cuff = center + axis * d["sleeve_m"] + cross * (a * scale * math.cos(theta))
+                cuff.y = -b * scale * math.sin(theta)
                 point = base[i].lerp(cuff, t)
                 # Two pre-simulation edge loops give cuffs a turned hem.
                 if r == ring_count - 1:
@@ -215,6 +223,11 @@ def build_patterns(dimensions, parent, profile="baseline"):
     bpy.ops.mesh.select_all(action="SELECT")
     bpy.ops.mesh.normals_make_consistent(inside=False)
     bpy.ops.object.mode_set(mode="OBJECT")
+    # Lock diagonals before simulation. Opposite triangulations of warped
+    # outer/inner quads can otherwise cross after Solidify and GLB export.
+    triangulate = garment.modifiers.new("FixedPatternTriangles", "TRIANGULATE")
+    triangulate.quad_method = "FIXED"
+    bpy.ops.object.modifier_apply(modifier=triangulate.name)
     garment["pattern_pieces"] = ["front", "back", "sleeve_left", "sleeve_right", "collar_rib"]
     garment["solver_profile"] = profile
     garment["seam_method"] = ("Five pattern pieces joined by matching boundary vertices before simulation"
@@ -229,14 +242,36 @@ def build_patterns(dimensions, parent, profile="baseline"):
         for point, position in zip(rest.data, rest_positions):
             point.co = position
     pin = garment.vertex_groups.new(name="HangerSupport")
+    sleeve_vertices = {i for face, part in zip(pattern.faces, pattern.face_parts)
+                       if part.startswith("sleeve_") for i in face}
+    body_vertices = {i for face, part in zip(pattern.faces, pattern.face_parts)
+                     if part in {"front", "back"} for i in face}
+    free_sleeve_vertices = sleeve_vertices - body_vertices
     # Support patches on the shoulders, with soft falloff. Neck and body
     # remain free. These are a repeatable hanger contact stabilization aid.
     for v in garment.data.vertices:
         x, y, z = v.co
         hanger_top = -.082 - .050 * (abs(x) / .22) ** 1.28 + .007
-        if .105 <= abs(x) <= .215 and z > hanger_top - .004 and abs(y) < .026:
-            v.co.z = hanger_top + .002
+        if profile == "baseline":
+            vertical = max(0., min(1., (-z - .10) / .70))
+            weight = .35 if v.index in free_sleeve_vertices else max(drape_support, .85 - 2.5 * vertical)
+            pin.add([v.index], weight, "REPLACE")
+        if .105 <= abs(x) <= .235 and z > hanger_top - .004 and abs(y) < .026:
+            v.co.z = max(v.co.z, hanger_top + .004)
             pin.add([v.index], 1., "REPLACE")
+    garment["drape_support"] = drape_support
+    # Fit the initial shoulder envelope around the actual closed hanger mesh
+    # before physics. A rest-shape constraint must not start inside its collider.
+    wood = bpy.data.objects["HangerWood"].data
+    wood_tree = BVHTree.FromPolygons([v.co for v in wood.vertices], [list(p.vertices) for p in wood.polygons])
+    for vertex in garment.data.vertices:
+        if abs(vertex.co.x) > .23 or abs(vertex.co.y) > .025 or vertex.co.z < -.15:
+            continue
+        surface, normal, _, distance = wood_tree.find_nearest(vertex.co)
+        signed = (vertex.co - surface).dot(normal)
+        if signed < .0035 and distance < .012:
+            vertex.co = surface + normal * .0035
+            pin.add([vertex.index], 1., "REPLACE")
     # Ribbing resists stretching more than the body jersey. A soft rest-shape
     # constraint preserves the curved opening without adding render topology.
     rib_vertices = {i for face, part in zip(pattern.faces, pattern.face_parts)
@@ -344,6 +379,7 @@ def main():
     parser.add_argument("--experiment", help="Write isolated trial outputs under assets-src/experiments/NAME")
     parser.add_argument("--profile", choices=["baseline", "sewn"], default="baseline")
     parser.add_argument("--bend", type=float, default=.08, help="Explicit bending parameter for an isolated comparison")
+    parser.add_argument("--drape-support", type=float, default=.45, help="Soft body rest-shape support for the smooth reference silhouette")
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     if args.frames < 73:
         parser.error("At least 72 frames (3 s) of warmup are required")
@@ -363,7 +399,7 @@ def main():
         dimensions.update(json.loads(measurements.read_text(encoding="utf-8")))
     pivot = empty("HookPivot")
     build_hanger(pivot)
-    garment, layout = build_patterns(dimensions, pivot, args.profile)
+    garment, layout = build_patterns(dimensions, pivot, args.profile, args.drape_support)
     if args.bend is not None:
         garment["bending_override"] = args.bend
     expected_initial = np.array([v.co[:] for v in garment.data.vertices])
@@ -414,7 +450,7 @@ def main():
         "last_frame_max_velocity_m_s": speed,
         "seam_method": garment["seam_method"], "welded_seam_references": garment["welded_seam_references"],
         "topology_changes_after_simulation": "Only required fixed-topology Solidify 0.002 m; no remesh/subdivision/decimation",
-        "cloth_settings": {"profile": args.profile, "vertex_mass_kg": solver_mass, "target_fabric": "Medium cotton jersey, 180-220 g/m² visual target", "physically_calibrated": False, "self_collision": True},
+        "cloth_settings": {"profile": args.profile, "vertex_mass_kg": solver_mass, "drape_support": args.drape_support, "target_fabric": "Medium cotton jersey, 180-220 g/m² visual target", "physically_calibrated": False, "self_collision": True},
         "elapsed_seconds": round(time.perf_counter() - started, 3),
         "known_issues": ["Small pinned shoulder support patches stabilize contact; garment is not held purely by friction", "Material parameters are an artist-tuned medium cotton approximation, not a measured fabric calibration"],
     })
