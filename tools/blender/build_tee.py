@@ -41,7 +41,7 @@ class PatternAssembly:
         self.face_parts.append(part)
 
 
-def build_patterns(dimensions, parent, profile="baseline", drape_support=.33, collar_support=.6):
+def build_patterns(dimensions, parent, profile="baseline", drape_support=.33, collar_support=.6, sleeve_support=.3):
     d = dimensions
     pattern = PatternAssembly()
     columns, rows, arm_rows = 44, 40, 14
@@ -317,9 +317,10 @@ def build_patterns(dimensions, parent, profile="baseline", drape_support=.33, co
             else:
                 fall = max(0., min(1., (-z - .10) / .65))
                 weight = drape_support * (1 - .7 * fall)
-                # Sleeves get much less: they should droop and swing, not hold their start pose.
+                # Sleeves get less: they should droop and swing, not hold their start pose.
+                # Too little and they wander forward into the neighbours on the rail.
                 if v.index in free_sleeve_vertices:
-                    weight *= .3
+                    weight *= sleeve_support
                 pin.add([v.index], weight, "REPLACE")
             continue
         if .105 <= abs(x) <= .235 and z > hanger_top - .004 and abs(y) < .026:
@@ -478,6 +479,7 @@ def main():
     parser.add_argument("--experiment", help="Write isolated trial outputs under assets-src/experiments/NAME")
     parser.add_argument("--profile", choices=["baseline", "sewn", "gravity"], default="gravity")
     parser.add_argument("--bend", type=float, default=1.5, help="Explicit bending parameter for an isolated comparison")
+    parser.add_argument("--sleeve-support", type=float, default=.6, help="Gravity profile: sleeve goal as a fraction of the body's")
     parser.add_argument("--collar-support", type=float, default=.9, help="Gravity profile: rest-shape goal on the ribbed collar")
     parser.add_argument("--mass", type=float, default=.035, help="Gravity profile: solver vertex mass (visual tuning, not g/m²)")
     parser.add_argument("--drape-support", type=float, default=.15, help="Soft body rest-shape support for broad, smooth cloth folds")
@@ -500,7 +502,7 @@ def main():
         dimensions.update(json.loads(measurements.read_text(encoding="utf-8")))
     pivot = empty("HookPivot")
     build_hanger(pivot)
-    garment, layout = build_patterns(dimensions, pivot, args.profile, args.drape_support, args.collar_support)
+    garment, layout = build_patterns(dimensions, pivot, args.profile, args.drape_support, args.collar_support, args.sleeve_support)
     if args.bend is not None:
         garment["bending_override"] = args.bend
     if args.mass is not None:

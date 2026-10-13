@@ -24,7 +24,7 @@ const DEG = Math.PI / 180
 const COUNT = products.length
 
 /** Rail layout: the centre piece faces front, neighbours turn side-on and pack together. */
-export const LAYOUT = { near: 0.58, far: 0.11, sideYaw: 82 * DEG, recess: 0.035 }
+export const LAYOUT = { near: 0.58, far: 0.13, sideYaw: 82 * DEG, recess: 0.035 }
 const INSPECT: [number, number, number] = [0, 0.05, 0.6]
 const SWITCH_OUT = 0.45
 const SWITCH_IN_START = 0.15
@@ -39,15 +39,9 @@ export interface Pose {
   spin: number
   /** Turn of hanger body + garment only, hook stays on the rail (side-on neighbours). */
   rackYaw: number
+  /** Rigid swing of the whole hanger about the hook; the cloth's own lag comes from clothProxy. */
   swingZ: number
   swingX: number
-  /** Hem lag in garment-local space, metres at the hem. */
-  bendX: number
-  bendZ: number
-  /** Radial spread of the hem from spinning. */
-  flare: number
-  /** Hem twist lagging behind the spin, radians at the hem. */
-  twist: number
 }
 
 interface Track {
@@ -57,8 +51,6 @@ interface Track {
   pz: number
   vx: number
   vz: number
-  pspin: number
-  spinVel: number
   fresh: boolean
 }
 
@@ -98,11 +90,11 @@ class Rig {
   aspect = 1
   pxPerItem = 200
   pxPerRadian = 120
-  poses: Pose[] = products.map(() => ({ x: 0, y: 0, z: 0, spin: 0, rackYaw: 0, swingZ: 0, swingX: 0, bendX: 0, bendZ: 0, flare: 0, twist: 0 }))
+  poses: Pose[] = products.map(() => ({ x: 0, y: 0, z: 0, spin: 0, rackYaw: 0, swingZ: 0, swingX: 0 }))
   private tracks: Track[] = products.map(() => ({
     lateral: { angle: 0, velocity: 0 },
     depth: { angle: 0, velocity: 0 },
-    px: 0, pz: 0, vx: 0, vz: 0, pspin: 0, spinVel: 0, fresh: true,
+    px: 0, pz: 0, vx: 0, vz: 0, fresh: true,
   }))
   private drag: Drag | null = null
   private tracker = new VelocityTracker()
@@ -135,7 +127,14 @@ class Rig {
     }
   }
 
-  private playing(i: number) {
+  /** True for rail garments pushed out of view while another piece is in the close-up. */
+  offstage(i: number) {
+    if (this.blend < 0.98) return false
+    return i !== this.active && !(this.switching && i === this.switching.from)
+  }
+
+  /** True while garment i plays a baked clip (its cloth proxy should follow the rest shape). */
+  playing(i: number) {
     const clip = this.clips[i]
     return this.bakedClips && !!clip && clip.name !== 'hold'
   }
@@ -409,7 +408,6 @@ class Rig {
     const jumped = Math.abs(x - track.px) > 0.5 || Math.abs(z - track.pz) > 0.5
     if (track.fresh || jumped) {
       track.vx = track.vz = 0
-      track.spinVel = 0
       track.fresh = false
     } else {
       const vx = (x - track.px) / dt
@@ -418,28 +416,19 @@ class Rig {
       az = clamp((vz - track.vz) / dt, -30, 30)
       track.vx = vx
       track.vz = vz
-      const spinVel = (spin + rackYaw - track.pspin) / dt
-      track.spinVel += (spinVel - track.spinVel) * Math.min(1, dt * 18)
     }
     track.px = x
     track.pz = z
-    track.pspin = spin + rackYaw
 
     if (this.reduced || this.playing(i)) {
       track.lateral.angle = track.lateral.velocity = 0
       track.depth.angle = track.depth.velocity = 0
-      track.spinVel = 0
     } else {
-      stepPendulum(track.lateral, ax, PENDULUM_LENGTH, 2.4, dt)
-      stepPendulum(track.depth, az, PENDULUM_LENGTH, 2.8, dt)
+      // A hanger with a garment on it stops within a couple of swings (cloth drag, hook friction).
+      stepPendulum(track.lateral, ax, PENDULUM_LENGTH, 5, dt)
+      stepPendulum(track.depth, az, PENDULUM_LENGTH, 5.5, dt)
     }
 
-    // Hem lag: world-space lag rotated into the garment's own frame.
-    const wx = clamp(-track.lateral.velocity * 0.03, -0.06, 0.06)
-    const wz = clamp(-track.depth.velocity * 0.03, -0.06, 0.06)
-    const psi = spin + rackYaw
-    const c = Math.cos(psi)
-    const s = Math.sin(psi)
     pose.x = x
     pose.y = y
     pose.z = z
@@ -447,19 +436,17 @@ class Rig {
     pose.rackYaw = rackYaw
     pose.swingZ = track.lateral.angle
     pose.swingX = -track.depth.angle
-    pose.bendX = wx * c - wz * s
-    pose.bendZ = wx * s + wz * c
-    const procedural = !this.reduced && !this.playing(i)
-    pose.flare = procedural ? Math.min(0.2, track.spinVel ** 2 * 0.0018) : 0
-    pose.twist = procedural ? clamp(-track.spinVel * 0.035, -0.3, 0.3) : 0
 
     const p = track.lateral
     const q = track.depth
-    return (
-      Math.abs(p.angle) > 2e-4 || Math.abs(p.velocity) > 2e-3 ||
-      Math.abs(q.angle) > 2e-4 || Math.abs(q.velocity) > 2e-3 ||
-      Math.abs(track.spinVel) > 1e-3
-    )
+    const swinging =
+      Math.abs(p.angle) > 5e-4 || Math.abs(p.velocity) > 5e-3 ||
+      Math.abs(q.angle) > 5e-4 || Math.abs(q.velocity) > 5e-3
+    if (!swinging) {
+      // Snap the last micro-swing to rest so the hanger (and the cloth riding on it) can sleep.
+      p.angle = p.velocity = q.angle = q.velocity = 0
+    }
+    return swinging
   }
 }
 

@@ -7,19 +7,19 @@
     "return": 1.25
   },
   "relative_frame_vertex_max_velocities_m_s": {
-    "121": 0.004915004596114159,
-    "157": 0.007216157391667366,
-    "187": 0.012496822513639927
+    "121": 0.005083191208541393,
+    "157": 0.030073679983615875,
+    "187": 0.006593409925699234
   },
-  "max_relative_displacement_m": 0.015919934958219528,
-  "crease_relaxation_max_shift_m": 0.0,
+  "max_relative_displacement_m": 0.014798172749578953,
+  "crease_relaxation_max_shift_m": 0.00758408335968852,
   "motion_support": 0.8,
   "motion_stiffness_while_moving": 0.3,
   "return_settle_blend_frames": 8,
   "clip_boundary_sample": "Both clips reference the same simulated sample 36 at the transition",
   "return_end_base_rms_m": 0.0,
   "return_end_base_max_m": 0.0,
-  "elapsed_seconds": 84.004,
+  "elapsed_seconds": 68.972,
   "static_export_method": "Prune animation/target buffers from the exact animated GLB; base attributes and indices are unchanged",
   "known_issues": [
     "Solver parameters are tuned for visual medium cotton, not physically calibrated",

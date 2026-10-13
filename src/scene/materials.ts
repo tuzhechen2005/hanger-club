@@ -3,25 +3,24 @@ import type { PrintPlacement, Product } from '../data/products'
 import { UV_LAYOUT } from './uvLayout'
 
 export interface ClothUniforms {
-  uBend: { value: THREE.Vector2 }
-  uFlare: { value: number }
-  uTwist: { value: number }
-  uLength: { value: number }
-  /** Mesh node → hanger (HookPivot) space, and back. Quantised GLB meshes are not in metres. */
+  /** Per-particle offsets from the cloth proxy (body space, metres). */
+  uDisp: { value: THREE.Texture | null }
+  uDispWidth: { value: number }
+  uDispOn: { value: number }
+  /** Mesh node → hanger (body) space, and back. Quantised GLB meshes are not in metres. */
   uToPivot: { value: THREE.Matrix4 }
   uFromPivot: { value: THREE.Matrix4 }
 }
 
 /**
- * Cheap secondary motion in the vertex shader: the hem lags behind swings and spins, weighted
- * by depth below the hook. Not cloth simulation; baked clips replace it while they play.
+ * Moves each vertex by the offsets of the proxy particles it is bound to (attributes
+ * aProxyIdx / aProxyW, see clothProxy.ts). Offsets are added after the baked morphs.
  */
 export function patchCloth(material: THREE.Material, toPivot = new THREE.Matrix4()) {
   const uniforms: ClothUniforms = {
-    uBend: { value: new THREE.Vector2() },
-    uFlare: { value: 0 },
-    uTwist: { value: 0 },
-    uLength: { value: 0.82 },
+    uDisp: { value: null },
+    uDispWidth: { value: 32 },
+    uDispOn: { value: 0 },
     uToPivot: { value: toPivot.clone() },
     uFromPivot: { value: toPivot.clone().invert() },
   }
@@ -31,24 +30,28 @@ export function patchCloth(material: THREE.Material, toPivot = new THREE.Matrix4
       .replace(
         '#include <common>',
         `#include <common>
-uniform vec2 uBend;
-uniform float uFlare;
-uniform float uTwist;
-uniform float uLength;
+attribute vec4 aProxyIdx;
+attribute vec4 aProxyW;
+uniform sampler2D uDisp;
+uniform float uDispWidth;
+uniform float uDispOn;
 uniform mat4 uToPivot;
-uniform mat4 uFromPivot;`,
+uniform mat4 uFromPivot;
+vec3 proxyOffset(float index) {
+  int i = int(index + 0.5);
+  int w = int(uDispWidth);
+  return texelFetch(uDisp, ivec2(i % w, i / w), 0).xyz;
+}`,
       )
       .replace(
         '#include <morphtarget_vertex>',
         `#include <morphtarget_vertex>
-vec3 pivot = (uToPivot * vec4(transformed, 1.0)).xyz;
-float hang = clamp((-pivot.y - 0.08) / uLength, 0.0, 1.0);
-float w = hang * hang;
-float tw = uTwist * w;
-pivot.xz = mat2(cos(tw), -sin(tw), sin(tw), cos(tw)) * pivot.xz;
-pivot.xz += pivot.xz * uFlare * w;
-pivot.xz += uBend * w;
-transformed = (uFromPivot * vec4(pivot, 1.0)).xyz;`,
+if (uDispOn > 0.5) {
+  vec3 pivot = (uToPivot * vec4(transformed, 1.0)).xyz;
+  pivot += aProxyW.x * proxyOffset(aProxyIdx.x) + aProxyW.y * proxyOffset(aProxyIdx.y)
+         + aProxyW.z * proxyOffset(aProxyIdx.z) + aProxyW.w * proxyOffset(aProxyIdx.w);
+  transformed = (uFromPivot * vec4(pivot, 1.0)).xyz;
+}`,
       )
     // A single-sheet placeholder shows its inside through the neck: darken back faces.
     if (material.side === THREE.DoubleSide) {
@@ -59,7 +62,7 @@ if (!gl_FrontFacing) diffuseColor.rgb *= 0.5;`,
       )
     }
   }
-  material.customProgramCacheKey = () => `cloth-v2-${material.side}`
+  material.customProgramCacheKey = () => `cloth-v3-${material.side}`
   return uniforms
 }
 

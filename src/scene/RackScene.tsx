@@ -8,6 +8,7 @@ import { computeFraming, FOV } from './framing'
 import { createHangerGeometry, createTeeGeometry } from './geometry'
 import { createFabricMaterials, createGarmentTexture, patchCloth, type ClothUniforms } from './materials'
 import { useGarmentModel, type GarmentModel } from './models'
+import { buildProxy, ClothSim, type ProxyPart } from './clothProxy'
 import type { Product } from '../data/products'
 
 interface GarmentRefs {
@@ -78,7 +79,22 @@ function fromPlaceholder(assets: PlaceholderAssets, product: Product, map: THREE
   }
 }
 
-function Garment({ index, placeholder, model }: { index: number; placeholder: PlaceholderAssets; model: GarmentModel | null }) {
+/** The template parts the cloth proxy is built from (all garments share this geometry). */
+function proxyParts(model: GarmentModel | null, placeholder: PlaceholderAssets): ProxyPart[] {
+  if (!model) return [{ geometry: placeholder.tee, toPivot: new THREE.Matrix4() }]
+  model.garment.updateMatrix()
+  const parts: ProxyPart[] = []
+  model.garment.traverse((o) => {
+    const mesh = o as THREE.Mesh
+    if (!mesh.isMesh) return
+    mesh.updateMatrix()
+    const toPivot = mesh === model.garment ? mesh.matrix.clone() : model.garment.matrix.clone().multiply(mesh.matrix)
+    parts.push({ geometry: mesh.geometry, toPivot })
+  })
+  return parts
+}
+
+function Garment({ index, placeholder, model, sim }: { index: number; placeholder: PlaceholderAssets; model: GarmentModel | null; sim: ClothSim }) {
   const invalidate = useThree((s) => s.invalidate)
   const product = products[index]
   const map = useMemo(() => createGarmentTexture(product, () => rig.invalidate()), [product])
@@ -92,12 +108,17 @@ function Garment({ index, placeholder, model }: { index: number; placeholder: Pl
   const body = useRef<THREE.Group>(null!)
 
   useEffect(() => {
+    for (const u of parts.uniforms) {
+      u.uDisp.value = sim.textures[index]
+      u.uDispWidth.value = sim.topology.textureWidth
+      u.uDispOn.value = 1
+    }
     for (const part of [parts.hook, parts.wood, parts.cloth]) part.traverse((o) => (o.castShadow = true))
     for (const mesh of parts.meshes) mesh.userData.index = index
     registry[index] = { slot: slot.current, swing: swing.current, spin: spin.current, body: body.current, meshes: parts.meshes, uniforms: parts.uniforms }
     invalidate()
     return () => parts.materials.forEach((m) => m.dispose())
-  }, [index, parts, invalidate])
+  }, [index, parts, sim, invalidate])
 
   useEffect(() => () => map.dispose(), [map])
 
@@ -116,7 +137,9 @@ function Garment({ index, placeholder, model }: { index: number; placeholder: Pl
   )
 }
 
-function Driver({ rail, wall }: { rail: React.RefObject<THREE.Mesh | null>; wall: React.RefObject<THREE.Mesh | null> }) {
+function Driver({ rail, wall, sim }: { rail: React.RefObject<THREE.Mesh | null>; wall: React.RefObject<THREE.Mesh | null>; sim: ClothSim }) {
+  const bodies = useMemo(() => products.map(() => new THREE.Matrix4()), [])
+  const follow = useMemo(() => products.map(() => false), [])
   const { camera, size, invalidate, raycaster, gl } = useThree()
 
   useEffect(() => {
@@ -157,11 +180,6 @@ function Driver({ rail, wall }: { rail: React.RefObject<THREE.Mesh | null>; wall
       g.swing.rotation.set(p.swingX, 0, p.swingZ)
       g.spin.rotation.y = p.spin
       g.body.rotation.y = p.rackYaw
-      for (const u of g.uniforms) {
-        u.uBend.value.set(p.bendX, p.bendZ)
-        u.uFlare.value = p.flare
-        u.uTwist.value = p.twist
-      }
       const morph = rig.morph(i)
       for (const mesh of g.meshes) {
         const influences = mesh.morphTargetInfluences
@@ -177,7 +195,16 @@ function Driver({ rail, wall }: { rail: React.RefObject<THREE.Mesh | null>; wall
       m.opacity = 1 - 0.8 * b
     }
     if (wall.current) (wall.current.material as THREE.ShadowMaterial).opacity = 0.1 * (1 - 0.75 * b)
-    if (moving) invalidate()
+    // Cloth proxies ride on the hanger bodies; baked clips (and reduced motion) override them.
+    registry.forEach((g, i) => {
+      if (!g) return
+      g.body.updateWorldMatrix(true, false)
+      bodies[i].copy(g.body.matrixWorld)
+      // Off-screen neighbours during the close-up don't need cloth, just their rest shape.
+      follow[i] = rig.reduced || rig.playing(i) || rig.offstage(i)
+    })
+    const clothMoving = registry.length === products.length && sim.step(dt, bodies, follow)
+    if (moving || clothMoving) invalidate()
   })
   return null
 }
@@ -204,12 +231,18 @@ function SceneContent() {
     rig.bakedClips = !!model?.animated
     rig.invalidate()
   }, [model])
+  // One proxy topology for the shared garment geometry, one simulation for all garments.
+  const sim = useMemo(() => new ClothSim(buildProxy(proxyParts(model, placeholder)), products.length), [model, placeholder])
+  useEffect(() => {
+    if (import.meta.env.DEV) Object.assign(window, { __sim: sim })
+    return () => sim.textures.forEach((t) => t.dispose())
+  }, [sim])
   const rail = useRef<THREE.Mesh>(null)
   const wall = useRef<THREE.Mesh>(null)
   const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
   return (
     <>
-      <Driver rail={rail} wall={wall} />
+      <Driver rail={rail} wall={wall} sim={sim} />
       <Environment />
       <hemisphereLight args={['#fffdf6', '#c9c2b4', 0.7]} />
       <directionalLight
@@ -236,7 +269,7 @@ function SceneContent() {
         <shadowMaterial opacity={0.1} />
       </mesh>
       {products.map((p, i) => (
-        <Garment key={p.id} index={i} placeholder={placeholder} model={model} />
+        <Garment key={p.id} index={i} placeholder={placeholder} model={model} sim={sim} />
       ))}
     </>
   )
