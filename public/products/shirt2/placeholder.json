@@ -1,0 +1,14 @@
+{
+  "slug": "shirt2",
+  "source": {
+    "front": "shirt2-front.webp"
+  },
+  "placeholder": true,
+  "fabric": "#d3cbc0",
+  "print_front": {
+    "centerX": -0.0053,
+    "top": 0.2564,
+    "width": 0.1464,
+    "aspect": 0.3373
+  }
+}

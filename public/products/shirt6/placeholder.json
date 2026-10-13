@@ -1,0 +1,14 @@
+{
+  "slug": "shirt6",
+  "source": {
+    "front": "shirt6-front.jpeg"
+  },
+  "placeholder": true,
+  "fabric": "#999992",
+  "print_front": {
+    "centerX": -0.036,
+    "top": 0.1838,
+    "width": 0.7331,
+    "aspect": 1.341
+  }
+}

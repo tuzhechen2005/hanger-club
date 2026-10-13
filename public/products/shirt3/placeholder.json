@@ -1,0 +1,15 @@
+{
+  "slug": "shirt3",
+  "source": {
+    "back": "shirt3-back.webp",
+    "front": "shirt3-front.webp"
+  },
+  "placeholder": true,
+  "fabric": "#473a32",
+  "print_front": {
+    "centerX": 0.001,
+    "top": 0.1733,
+    "width": 0.1782,
+    "aspect": 0.3871
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "slug": "shirt7",
+  "source": {
+    "front": "shirt7-front.jpeg"
+  },
+  "placeholder": true,
+  "fabric": "#aaa9a5",
+  "print_front": {
+    "centerX": 0.0054,
+    "top": 0.2143,
+    "width": 0.6989,
+    "aspect": 0.6769
+  }
+}
