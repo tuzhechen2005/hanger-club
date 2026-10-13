@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { productById, products } from '../data/products'
 import { useUI, type Sheet as SheetName } from '../state/store'
 
@@ -146,37 +146,3 @@ export function IndexSheet({ onPick }: { onPick: (index: number) => void }) {
   )
 }
 
-/** The studio photo clipped behind the spec ticket, opened full size. */
-export function PhotoSheet() {
-  const index = useUI((s) => s.index)
-  const open = useUI((s) => s.sheet === 'photo')
-  const product = products[index]
-  const [side, setSide] = useState(0)
-  useEffect(() => {
-    if (open) setSide(0)
-  }, [open, index])
-  const photo = product.photos[Math.min(side, product.photos.length - 1)]
-  return (
-    <Sheet name="photo" label={`${product.name}, original photo`}>
-      <figure className="polaroid">
-        <img src={photo.url} alt={`${product.name}, studio photo, ${photo.side}`} />
-        <figcaption>
-          <span>
-            Nº {String(index + 1).padStart(2, '0')} · {product.name}
-          </span>
-          <span>As photographed · {photo.side}</span>
-        </figcaption>
-      </figure>
-      {product.photos.length > 1 && (
-        <div className="photo-sides" role="radiogroup" aria-label="Side">
-          {product.photos.map((p, i) => (
-            <button key={p.side} role="radio" aria-checked={i === side} className={i === side ? 'selected' : ''} onClick={() => setSide(i)}>
-              {p.side}
-            </button>
-          ))}
-        </div>
-      )}
-      <p className="note">Brand product photo, used for this private demo only.</p>
-    </Sheet>
-  )
-}

@@ -7,7 +7,7 @@ const TAN = Math.tan(((FOV / 2) * Math.PI) / 180)
 /** Lowest point of a hanging garment below the hook, used to place the DOM info under it. */
 export const GARMENT_BOTTOM = -0.88
 export const INSPECT_Z = 0.6
-const INSPECT_Y = 0.05
+export const INSPECT_Y = 0.05
 
 export interface View {
   /** Visible height (m) at the plane being framed. */

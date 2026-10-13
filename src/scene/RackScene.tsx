@@ -4,7 +4,8 @@ import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { products } from '../data/products'
 import { rig } from '../motion/rig'
-import { computeFraming, FOV } from './framing'
+import { computeFraming, FOV, GARMENT_BOTTOM, INSPECT_Y, INSPECT_Z } from './framing'
+import { useUI } from '../state/store'
 import { createHangerGeometry, createTeeGeometry } from './geometry'
 import { clothDepthMaterial, clothUniforms, createFabricMaterials, createGarmentTexture, patchCloth, type ClothUniforms } from './materials'
 import { useGarmentModel, type GarmentModel } from './models'
@@ -23,6 +24,8 @@ interface GarmentRefs {
 
 const registry: GarmentRefs[] = []
 let cssRail = ''
+/** Lift time (s) at which the photo starts developing: the turn is at ~270°, coming round. */
+const PHOTO_REVEAL_AT = 0.8
 let cssLift = ''
 
 function usePlaceholderAssets() {
@@ -185,11 +188,34 @@ function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh 
     const root = document.documentElement.style
     root.setProperty('--browse-info-top', `${(framing.browseInfo * 100).toFixed(2)}%`)
     root.setProperty('--inspect-info-top', `${(framing.inspectInfo * 100).toFixed(2)}%`)
+    // Where the close-up garment lands on screen, so the original photo can develop right on
+    // top of it (ui/PhotoView). The export centres each photo with the tee about 0.76 of the
+    // square tall; the 3D tee runs from the collar (9 cm below the hook) to the hem.
+    const cam = new THREE.PerspectiveCamera(FOV, size.width / size.height, 0.1, 40)
+    cam.position.set(framing.inspect.cameraX, framing.inspect.cameraY, framing.inspect.cameraZ)
+    cam.lookAt(framing.inspect.cameraX, framing.inspect.cameraY, 0)
+    cam.updateMatrixWorld()
+    const toScreen = (y: number) => {
+      const v = new THREE.Vector3(0, y, INSPECT_Z).project(cam)
+      return { x: ((v.x + 1) / 2) * size.width, y: ((1 - v.y) / 2) * size.height }
+    }
+    const collar = toScreen(INSPECT_Y - 0.09)
+    const hem = toScreen(INSPECT_Y + GARMENT_BOTTOM)
+    root.setProperty('--g-x', `${collar.x.toFixed(1)}px`)
+    root.setProperty('--g-y', `${((collar.y + hem.y) / 2).toFixed(1)}px`)
+    root.setProperty('--g-s', `${((hem.y - collar.y) / 0.76).toFixed(1)}px`)
     invalidate()
   }, [framing, size.width, size.height, invalidate])
 
+  const revealed = useRef(false)
   useFrame((_, dt) => {
     const moving = rig.step(dt)
+    // As the lift turn swings back toward the front, the garment develops into its photo.
+    if (rig.mode === 'browse') revealed.current = false
+    else if (rig.mode === 'lifting' && !revealed.current && rig.t >= (rig.reduced ? 0.8 : PHOTO_REVEAL_AT)) {
+      revealed.current = true
+      if (!useUI.getState().photo) useUI.getState().openPhoto('garment')
+    }
     const b = rig.blend
     const { browse, inspect } = framing
     const cx = browse.cameraX + (inspect.cameraX - browse.cameraX) * b

@@ -2,7 +2,8 @@ import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type C
 import { MEASUREMENTS, products, SIZES } from './data/products'
 import { rig } from './motion/rig'
 import { useUI } from './state/store'
-import { BagSheet, IndexSheet, PhotoSheet } from './ui/Sheets'
+import { BagSheet, IndexSheet } from './ui/Sheets'
+import { PhotoView } from './ui/PhotoView'
 import { TeeThumb } from './ui/TeeThumb'
 
 const RackScene = lazy(() => import('./scene/RackScene'))
@@ -107,7 +108,8 @@ export default function App() {
   const bagCount = useUI((s) => s.bag.reduce((n, l) => n + l.qty, 0))
   const sheet = useUI((s) => s.sheet)
   const toast = useUI((s) => s.toast)
-  const { setSize, addToBag, openSheet, showToast } = useUI.getState()
+  const { setSize, addToBag, openSheet, showToast, openPhoto } = useUI.getState()
+  const photoOpen = useUI((s) => s.photo !== null)
   const product = products[index]
   const seeButton = useRef<HTMLButtonElement>(null)
   const detailTitle = useRef<HTMLHeadingElement>(null)
@@ -129,9 +131,16 @@ export default function App() {
     previousMode.current = mode
   }, [mode])
 
+  // Coming back from the original photo, continue on the spec ticket.
+  const wasPhotoOpen = useRef(false)
+  useEffect(() => {
+    if (wasPhotoOpen.current && !photoOpen && mode === 'inspect') detailTitle.current?.focus({ preventScroll: true })
+    wasPhotoOpen.current = photoOpen
+  }, [photoOpen, mode])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (sheet) return
+      if (sheet || photoOpen) return
       const target = e.target as HTMLElement
       if (target.closest('input, textarea, select')) return
       if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -144,7 +153,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [controls, mode, sheet])
+  }, [controls, mode, sheet, photoOpen])
 
   useEffect(() => {
     if (!toast) return
@@ -244,7 +253,7 @@ export default function App() {
         </button>
         <div className="detail-card">
           {/* The original studio photo, clipped behind the ticket like a proof print. */}
-          <button className="proof" key={`proof-${index}`} onClick={() => openSheet('photo')} aria-label={`See the original photo of ${product.name}`}>
+          <button className="proof" key={`proof-${index}`} onClick={() => openPhoto('clip')} aria-label={`See the original photo of ${product.name}`}>
             <img src={product.photos[0].url} alt="" />
             <span className="clip" aria-hidden="true" />
           </button>
@@ -305,7 +314,7 @@ export default function App() {
 
       <BagSheet />
       <IndexSheet onPick={(i) => controls.select(i)} />
-      <PhotoSheet />
+      <PhotoView />
       <div className={`toast ${toastVisible ? 'show' : ''}`} role="status">
         {toast?.text}
       </div>
