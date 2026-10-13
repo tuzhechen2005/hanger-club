@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { products } from '../data/products'
@@ -8,7 +8,7 @@ import { computeFraming, FOV } from './framing'
 import { createHangerGeometry, createTeeGeometry } from './geometry'
 import { clothDepthMaterial, clothUniforms, createFabricMaterials, createGarmentTexture, patchCloth, type ClothUniforms } from './materials'
 import { useGarmentModel, type GarmentModel } from './models'
-import { buildProxy, ClothSim, JERSEY_TEE, type ProxyPart } from './clothProxy'
+import { buildProxy, ClothSim, coarser, JERSEY_TEE, type ProxyPart } from './clothProxy'
 import type { Product } from '../data/products'
 
 interface GarmentRefs {
@@ -156,7 +156,7 @@ function Garment({ index, placeholder, model, sim }: { index: number; placeholde
   )
 }
 
-function Driver({ rail, wall, sim }: { rail: React.RefObject<THREE.Mesh | null>; wall: React.RefObject<THREE.Mesh | null>; sim: ClothSim }) {
+function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh | null>; wall: React.RefObject<THREE.Mesh | null>; sim: ClothSim; onSlow: () => void }) {
   const bodies = useMemo(() => products.map(() => new THREE.Matrix4()), [])
   const follow = useMemo(() => products.map(() => false), [])
   const inertia = useMemo(() => products.map(() => 1), [])
@@ -226,6 +226,7 @@ function Driver({ rail, wall, sim }: { rail: React.RefObject<THREE.Mesh | null>;
       inertia[i] = rig.inertia(i)
     })
     const clothMoving = registry.length === products.length && sim.step(dt, bodies, follow, inertia)
+    if (sim.slow) onSlow()
     if (moving || clothMoving) invalidate()
   })
   return null
@@ -254,10 +255,12 @@ function SceneContent() {
     rig.invalidate()
   }, [model])
   // One proxy topology for the shared garment geometry, one simulation for all garments.
+  // A device that cannot keep up with the cloth gets a coarser proxy once (cloth resets to rest).
+  const [coarse, setCoarse] = useState(false)
   const sim = useMemo(() => {
     const { parts, support } = proxyParts(model, placeholder)
-    return new ClothSim(buildProxy(parts, support, JERSEY_TEE), products.length)
-  }, [model, placeholder])
+    return new ClothSim(buildProxy(parts, support, coarse ? coarser(JERSEY_TEE) : JERSEY_TEE), products.length)
+  }, [model, placeholder, coarse])
   const scene = useThree((state) => state.scene)
   useEffect(() => {
     if (import.meta.env.DEV) Object.assign(window, { __sim: sim, __scene: scene })
@@ -268,7 +271,7 @@ function SceneContent() {
   const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
   return (
     <>
-      <Driver rail={rail} wall={wall} sim={sim} />
+      <Driver rail={rail} wall={wall} sim={sim} onSlow={() => setCoarse(true)} />
       <Environment />
       <hemisphereLight args={['#fffdf6', '#c9c2b4', 0.7]} />
       <directionalLight

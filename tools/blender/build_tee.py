@@ -479,7 +479,7 @@ def main():
     parser.add_argument("--experiment", help="Write isolated trial outputs under assets-src/experiments/NAME")
     parser.add_argument("--profile", choices=["baseline", "sewn", "gravity"], default="gravity")
     parser.add_argument("--bend", type=float, default=1.5, help="Explicit bending parameter for an isolated comparison")
-    parser.add_argument("--sleeve-support", type=float, default=.6, help="Gravity profile: sleeve goal as a fraction of the body's")
+    parser.add_argument("--sleeve-support", type=float, default=.8, help="Gravity profile: sleeve goal as a fraction of the body's")
     parser.add_argument("--collar-support", type=float, default=.9, help="Gravity profile: rest-shape goal on the ribbed collar")
     parser.add_argument("--mass", type=float, default=.035, help="Gravity profile: solver vertex mass (visual tuning, not g/m²)")
     parser.add_argument("--drape-support", type=float, default=.15, help="Soft body rest-shape support for broad, smooth cloth folds")

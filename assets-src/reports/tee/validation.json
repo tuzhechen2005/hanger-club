@@ -63,7 +63,7 @@
         2048,
         2048
       ],
-      "bytes": 1981050
+      "bytes": 2001487
     },
     {
       "name": "WoodGrain",
@@ -76,36 +76,36 @@
   ],
   "uv_orientation": {
     "front": {
-      "horizontal_uv_world_x_correlation": 0.9994324177270926,
-      "vertical_uv_world_y_correlation": 0.9999187686081416,
-      "mean_gltf_z_m": 0.016052428632974625
+      "horizontal_uv_world_x_correlation": 0.998817361201816,
+      "vertical_uv_world_y_correlation": 0.999926263133245,
+      "mean_gltf_z_m": 0.01271145697683096
     },
     "back": {
-      "horizontal_uv_world_x_correlation": -0.998353587431585,
-      "vertical_uv_world_y_correlation": 0.999836851635958,
-      "mean_gltf_z_m": -0.01730692759156227
+      "horizontal_uv_world_x_correlation": -0.9985996730866993,
+      "vertical_uv_world_y_correlation": 0.9997894157156965,
+      "mean_gltf_z_m": -0.020893191918730736
     }
   },
   "bounds_gltf_m": {
     "min": [
-      -0.43313321471214294,
-      -0.781214714050293,
-      -0.08096382021903992
+      -0.4688180685043335,
+      -0.7819489240646362,
+      -0.08366668224334717
     ],
     "max": [
-      0.46599793434143066,
-      -0.07772268354892731,
-      0.07567732781171799
+      0.4804171323776245,
+      -0.0781327411532402,
+      0.0816308930516243
     ]
   },
   "files": {
     "tee.glb": {
-      "bytes": 3900368,
-      "sha256": "8dde050522aaa3f20584025f8df3e8222b06aeada3cf53dbfb5c7af9b51a4534"
+      "bytes": 3920800,
+      "sha256": "4049430101065064f39f809e31880e4c993ed9a8b4f78633f2b4e889a26616b1"
     },
     "tee_anim.glb": {
-      "bytes": 18907864,
-      "sha256": "4e23450c4d211a2d2f160e993a52199712e017e5038c30d8a33a0decaa4f89fb"
+      "bytes": 18928252,
+      "sha256": "1920bb31973b4afbbc76bd419ae6be6b1c775acfcda7e8088dd55c77a87f0274"
     }
   },
   "scope": "Structural GLB validation; collision, mirror correctness and visual quality require separate checks"

@@ -22,7 +22,7 @@ const TARGETS = {
   turnPeakCm: 7.0,
   turnSettleS: 1.5,
   idleSteps: 0,
-  simMedianMs: 4.0,
+  simMedianMs: 5.0,
 }
 
 const browser = await chromium.launch({ executablePath: chrome, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })

@@ -15,27 +15,27 @@
     "triangles": 17792,
     "bounds_blender_m": {
       "min": [
-        -0.43313103914260864,
-        -0.07568270713090897,
-        -0.781191349029541
+        -0.4688089191913605,
+        -0.08164753764867783,
+        -0.7819223403930664
       ],
       "max": [
-        0.4659945070743561,
-        0.08097000420093536,
-        -0.07774890214204788
+        0.4804151952266693,
+        0.08372355997562408,
+        -0.0781686082482338
       ]
     }
   },
   "pre_roll_frames": 287,
   "pre_roll_seconds": 11.958333333333334,
-  "last_frame_max_velocity_m_s": 0.06384798139333725,
+  "last_frame_max_velocity_m_s": 0.05184018239378929,
   "seam_method": "Five pattern pieces joined by matching boundary vertices before simulation",
   "welded_seam_references": 76,
   "topology_changes_after_simulation": "Only required fixed-topology Solidify 0.002 m; no remesh/subdivision/decimation",
   "crease_relaxation": {
     "relax_iterations": 1,
-    "max_vertex_shift_m": 0.00704228924587369,
-    "vertices_moved": 19
+    "max_vertex_shift_m": 0.007390869315713644,
+    "vertices_moved": 42
   },
   "cloth_settings": {
     "profile": "gravity",
@@ -45,7 +45,7 @@
     "physically_calibrated": false,
     "self_collision": true
   },
-  "elapsed_seconds": 48.122,
+  "elapsed_seconds": 43.91,
   "known_issues": [
     "Small pinned shoulder support patches stabilize contact; garment is not held purely by friction",
     "Material parameters are an artist-tuned medium cotton approximation, not a measured fabric calibration"

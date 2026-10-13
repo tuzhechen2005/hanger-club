@@ -96,6 +96,22 @@ describe('cloth proxy', () => {
     expect(maxOffset(sim)).toBeLessThan(0.002)
   })
 
+  it('moves the same on 60 Hz and 120 Hz displays', () => {
+    const a = setup().sim
+    const b = setup().sim
+    const body = new THREE.Matrix4()
+    // Compare while the hanger is still accelerating, when the cloth lags the most.
+    const pose = (t: number) => body.makeTranslation(3 * t * t, 0, 0)
+    for (let f = 1; f <= 15; f++) a.step(1 / 60, [pose(f / 60)], [false])
+    for (let f = 1; f <= 30; f++) b.step(1 / 120, [pose(f / 120)], [false])
+    const da = a.textures[0].image.data as Float32Array
+    const db = b.textures[0].image.data as Float32Array
+    let diff = 0
+    for (let i = 0; i < da.length; i++) diff = Math.max(diff, Math.abs(da[i] - db[i]))
+    expect(maxOffset(a)).toBeGreaterThan(0.002)
+    expect(diff).toBeLessThan(1e-4)
+  })
+
   it('feels none of a choreographed move when its inertia scale is 0', () => {
     const { sim } = setup()
     const body = new THREE.Matrix4()

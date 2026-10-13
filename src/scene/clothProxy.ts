@@ -46,9 +46,9 @@ export interface ClothProfile {
   /** Stiffness of the two-ring bending pairs (0–1): higher keeps panels from creasing. */
   bend: number
   /**
-   * Shape keeping per horizontal band (0–1): each band of cloth tries to stay a rotated copy of
-   * its drape. Bands can tilt against each other (sway), but a band cannot twist or crumple, so
-   * the garment moves like a sewn tube instead of jelly.
+   * Shape keeping per local region (0–1): each patch of cloth tries to stay a rotated copy of
+   * its drape. Regions can turn against each other (sway, a sleeve swinging at the armhole),
+   * but a patch cannot crumple or shear, so the garment moves like cloth instead of jelly.
    */
   shape: number
   /** Largest offset the render mesh may take from the authored drape (m). */
@@ -59,7 +59,7 @@ export interface ClothProfile {
 
 /** Mid-weight cotton jersey tee on a wooden hanger (the demo's boxy tee). */
 export const JERSEY_TEE: ClothProfile = {
-  cell: 0.055,
+  cell: 0.04,
   pinDistance: 0.04,
   goalTop: 0.3,
   goalHem: 0.04,
@@ -70,8 +70,16 @@ export const JERSEY_TEE: ClothProfile = {
   bend: 0.6,
   shape: 0.25,
   maxOffset: 0.08,
-  radius: 0.024,
+  radius: 0.018,
 }
+
+/** The same fabric on a coarser proxy, for devices that cannot keep up (about half the cost). */
+export function coarser(profile: ClothProfile): ClothProfile {
+  return { ...profile, cell: profile.cell * 1.35, radius: profile.radius * 1.35 }
+}
+
+/** Average simulation time per step (ms) above which a device counts as too slow. */
+export const SLOW_STEP_MS = 7
 
 export interface ProxyTopology {
   count: number
@@ -95,9 +103,9 @@ export interface ProxyTopology {
    * regularised): turns neighbour offsets into a least-squares deformation gradient.
    */
   covInverse: Float32Array
-  /** Overlapping horizontal bands for shape keeping (CSR: members of band b). */
-  bandStart: Uint32Array
-  bands: Uint32Array
+  /** Overlapping local regions for shape keeping (CSR: members of region r). */
+  regionStart: Uint32Array
+  regions: Uint32Array
   textureWidth: number
   profile: ClothProfile
 }
@@ -113,70 +121,103 @@ export interface ProxyTopology {
  */
 export function buildProxy(parts: ProxyPart[], support: ProxyPart, profile: ClothProfile = JERSEY_TEE): ProxyTopology {
   const CELL = profile.cell
-  const keyOf = (x: number, y: number, z: number) => `${Math.floor(x / CELL)},${Math.floor(y / CELL)},${Math.floor(z / CELL)}`
-  const clusterOf = new Map<string, number>()
+  const pivotPositions = parts.map(pivotPoints)
+  const points = pivotPositions[0]
+  const vertexCount = points.length / 3
+  const index = parts[0].geometry.getIndex()
+  const corners = index ? index.array : Uint32Array.from({ length: vertexCount }, (_, i) => i)
+
+  // Patches: vertices in the same voxel that are also connected on the cloth within it. A plain
+  // voxel grid glues a sleeve to the body side (or front to back) wherever they hang within one
+  // cell, and the sleeve can then never swing on its own.
+  const parent = Int32Array.from({ length: vertexCount }, (_, i) => i)
+  const find = (i: number) => {
+    while (parent[i] !== i) i = parent[i] = parent[parent[i]]
+    return i
+  }
+  const union = (a: number, b: number) => {
+    const ra = find(a)
+    const rb = find(b)
+    if (ra !== rb) parent[ra] = rb
+    return rb
+  }
+  const voxel = (i: number) => `${Math.floor(points[i * 3] / CELL)},${Math.floor(points[i * 3 + 1] / CELL)},${Math.floor(points[i * 3 + 2] / CELL)}`
+  const voxels = Array.from({ length: vertexCount }, (_, i) => voxel(i))
+  // UV seams split vertices at one position: weld them.
+  const welded = new Map<string, number>()
+  for (let i = 0; i < vertexCount; i++) {
+    const key = `${Math.round(points[i * 3] * 1e4)},${Math.round(points[i * 3 + 1] * 1e4)},${Math.round(points[i * 3 + 2] * 1e4)}`
+    const other = welded.get(key)
+    if (other === undefined) welded.set(key, i)
+    else union(i, other)
+  }
+  const forEachEdge = (visit: (a: number, b: number) => void) => {
+    for (let t = 0; t < corners.length; t += 3) {
+      visit(corners[t], corners[t + 1])
+      visit(corners[t + 1], corners[t + 2])
+      visit(corners[t + 2], corners[t])
+    }
+  }
+  forEachEdge((a, b) => {
+    if (voxels[a] === voxels[b]) union(a, b)
+  })
+  // Fold slivers (a patch clipped by a voxel corner) into the neighbour they touch: anything
+  // under a quarter of the typical patch.
+  const patchSizes = () => {
+    const size = new Map<number, number>()
+    for (let i = 0; i < vertexCount; i++) size.set(find(i), (size.get(find(i)) ?? 0) + 1)
+    return size
+  }
+  const typical = [...patchSizes().values()].sort((p, q) => p - q)
+  const minSize = Math.max(2, typical[typical.length >> 1] / 4)
+  for (let pass = 0; pass < 4; pass++) {
+    const size = patchSizes()
+    let merged = false
+    forEachEdge((a, b) => {
+      const ra = find(a)
+      const rb = find(b)
+      if (ra === rb) return
+      const sa = size.get(ra)!
+      const sb = size.get(rb)!
+      if (Math.min(sa, sb) >= minSize) return
+      const root = sa < sb ? union(a, b) : union(b, a)
+      size.set(root, sa + sb)
+      merged = true
+    })
+    if (!merged) break
+  }
+  const clusterOfRoot = new Map<number, number>()
+  const outerCluster = new Int32Array(vertexCount)
   const sums: number[] = []
   const counts: number[] = []
-  const v = new THREE.Vector3()
-  const pivotPositions: Float32Array[] = []
-  const vertexCluster: Int32Array[] = []
-
-  for (const part of parts) {
-    const pos = part.geometry.getAttribute('position')
-    const out = new Float32Array(pos.count * 3)
-    const ids = new Int32Array(pos.count)
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i).applyMatrix4(part.toPivot)
-      out[i * 3] = v.x
-      out[i * 3 + 1] = v.y
-      out[i * 3 + 2] = v.z
-      const key = keyOf(v.x, v.y, v.z)
-      let id = clusterOf.get(key)
-      if (id === undefined) {
-        id = counts.length
-        clusterOf.set(key, id)
-        counts.push(0)
-        sums.push(0, 0, 0)
-      }
-      ids[i] = id
-      counts[id]++
-      sums[id * 3] += v.x
-      sums[id * 3 + 1] += v.y
-      sums[id * 3 + 2] += v.z
+  for (let i = 0; i < vertexCount; i++) {
+    const root = find(i)
+    let id = clusterOfRoot.get(root)
+    if (id === undefined) {
+      id = counts.length
+      clusterOfRoot.set(root, id)
+      counts.push(0)
+      sums.push(0, 0, 0)
     }
-    pivotPositions.push(out)
-    vertexCluster.push(ids)
+    outerCluster[i] = id
+    counts[id]++
+    for (let k = 0; k < 3; k++) sums[id * 3 + k] += points[i * 3 + k]
   }
 
   const count = counts.length
   const rest = new Float32Array(count * 3)
   for (let c = 0; c < count; c++) for (let k = 0; k < 3; k++) rest[c * 3 + k] = sums[c * 3 + k] / counts[c]
 
-  // Edges wherever a mesh triangle spans two clusters.
+  // Edges wherever a cloth edge joins two patches.
   const edgeSet = new Set<number>()
   const neighbors: Set<number>[] = Array.from({ length: count }, () => new Set())
-  parts.forEach((part, p) => {
-    const index = part.geometry.getIndex()
-    const ids = vertexCluster[p]
-    const tri = (n: number) => (index ? index.getX(n) : n)
-    const total = index ? index.count : ids.length
-    for (let t = 0; t < total; t += 3) {
-      const a = ids[tri(t)]
-      const b = ids[tri(t + 1)]
-      const c = ids[tri(t + 2)]
-      for (const [i, j] of [
-        [a, b],
-        [b, c],
-        [c, a],
-      ]) {
-        if (i === j) continue
-        const lo = Math.min(i, j)
-        const hi = Math.max(i, j)
-        edgeSet.add(lo * count + hi)
-        neighbors[i].add(j)
-        neighbors[j].add(i)
-      }
-    }
+  forEachEdge((va, vb) => {
+    const i = outerCluster[va]
+    const j = outerCluster[vb]
+    if (i === j) return
+    edgeSet.add(Math.min(i, j) * count + Math.max(i, j))
+    neighbors[i].add(j)
+    neighbors[j].add(i)
   })
   const edges = new Uint32Array(edgeSet.size * 2)
   const restLength = new Float32Array(edgeSet.size)
@@ -245,19 +286,27 @@ export function buildProxy(parts: ProxyPart[], support: ProxyPart, profile: Clot
     }
   }
 
-  // Bands two cells tall, one cell apart, so every particle sits in two of them.
-  const top = Math.max(...Array.from({ length: count }, (_, c) => rest[c * 3 + 1]))
-  const bandLists: number[][] = []
-  for (let b = 0; top - b * CELL > bottom; b++) {
-    const hi = top - b * CELL + 1e-6
-    const lo = hi - 2 * CELL
-    const members: number[] = []
-    for (let c = 0; c < count; c++) if (rest[c * 3 + 1] <= hi && rest[c * 3 + 1] > lo) members.push(c)
-    if (members.length >= 4 && members.some((c) => invMass[c] > 0)) bandLists.push(members)
+  // Shape-keeping regions: a centre particle and everything two links away on the cloth.
+  // Centres are spread so every particle neighbours one, so regions overlap and hold each other,
+  // while a sleeve (joined to the body only at the armhole) can still swing on its own.
+  const covered = new Uint8Array(count)
+  const regionLists: number[][] = []
+  for (let c = 0; c < count; c++) {
+    if (covered[c]) continue
+    const members = new Set([c])
+    for (let q = adjStart[c]; q < adjStart[c + 1]; q++) {
+      const j = adjacency[q]
+      members.add(j)
+      covered[j] = 1
+      for (let r = adjStart[j]; r < adjStart[j + 1]; r++) members.add(adjacency[r])
+    }
+    covered[c] = 1
+    const list = [...members]
+    if (list.length >= 4 && list.some((m) => invMass[m] > 0)) regionLists.push(list)
   }
-  const bandStart = new Uint32Array(bandLists.length + 1)
-  bandLists.forEach((m, b) => (bandStart[b + 1] = bandStart[b] + m.length))
-  const bands = Uint32Array.from(bandLists.flat())
+  const regionStart = new Uint32Array(regionLists.length + 1)
+  regionLists.forEach((m, r) => (regionStart[r + 1] = regionStart[r] + m.length))
+  const regions = Uint32Array.from(regionLists.flat())
 
   // Cloth is a surface, so the neighbourhood is flat; the regulariser keeps the normal
   // direction well-posed (gradient ≈ 0 along it).
@@ -275,9 +324,9 @@ export function buildProxy(parts: ProxyPart[], support: ProxyPart, profile: Clot
     covInverse.set(cov.elements, i * 9)
   }
 
-  bindSurface(parts, pivotPositions, rest, count, CELL * 1.55)
+  bindSurface(parts, pivotPositions, rest, outerCluster, adjStart, adjacency, CELL * 1.55)
 
-  return { count, rest, edges, restLength, bendEdges, bendLength, adjStart, adjacency, goal, invMass, covInverse, bandStart, bands, textureWidth: 32, profile }
+  return { count, rest, edges, restLength, bendEdges, bendLength, adjStart, adjacency, goal, invMass, covInverse, regionStart, regions, textureWidth: 32, profile }
 }
 
 function pivotPoints(part: ProxyPart) {
@@ -318,10 +367,19 @@ function pointGrid(points: Float32Array, size: number) {
 
 /**
  * Bind vertices to nearby particles with a smooth distance kernel K = (1 - d/R)³ (top 4,
- * normalised). Binding by cluster membership would jump at voxel borders.
+ * normalised). Binding only to the own patch would jump at patch borders. Candidates are the
+ * own patch and its neighbours on the cloth, never a particle that is merely close in space
+ * (a sleeve vertex must not follow the body side it hangs against).
  */
-function bindSurface(parts: ProxyPart[], positions: Float32Array[], rest: Float32Array, count: number, reach: number) {
-  const particles = pointGrid(rest, reach)
+function bindSurface(
+  parts: ProxyPart[],
+  positions: Float32Array[],
+  rest: Float32Array,
+  cluster: Int32Array,
+  adjStart: Uint32Array,
+  adjacency: Uint32Array,
+  reach: number,
+) {
   const outer = positions[0]
   const outerCount = outer.length / 3
   const idx = new Float32Array(outerCount * 4)
@@ -331,28 +389,20 @@ function bindSurface(parts: ProxyPart[], positions: Float32Array[], rest: Float3
     const x = outer[i * 3]
     const y = outer[i * 3 + 1]
     const z = outer[i * 3 + 2]
-    for (const b of best) b.k = 0
-    particles.around(x, y, z, (c) => {
+    const own = cluster[i]
+    for (const b of best) Object.assign(b, { c: own, k: 0 })
+    const consider = (c: number) => {
       const d = Math.sqrt((x - rest[c * 3]) ** 2 + (y - rest[c * 3 + 1]) ** 2 + (z - rest[c * 3 + 2]) ** 2)
-      if (d >= reach) return
-      const k = (1 - d / reach) ** 3
+      // The own patch always counts, however far its centre.
+      const k = Math.max((1 - Math.min(d / reach, 1)) ** 3, c === own ? 1e-4 : 0)
+      if (k === 0) return
       let slot = -1
       for (let s = 0; s < 4; s++) if (k > best[s].k && (slot < 0 || best[s].k < best[slot].k)) slot = s
       if (slot >= 0) Object.assign(best[slot], { c, k })
-    })
-    const total = best.reduce((sum, b) => sum + b.k, 0)
-    if (total === 0) {
-      // Nothing within reach (should not happen): follow the nearest particle rigidly.
-      let nearest = 0
-      let nd = Infinity
-      for (let c = 0; c < count; c++) {
-        const d = (x - rest[c * 3]) ** 2 + (y - rest[c * 3 + 1]) ** 2 + (z - rest[c * 3 + 2]) ** 2
-        if (d < nd) [nearest, nd] = [c, d]
-      }
-      idx[i * 4] = nearest
-      wts[i * 4] = 1
-      continue
     }
+    consider(own)
+    for (let q = adjStart[own]; q < adjStart[own + 1]; q++) consider(adjacency[q])
+    const total = best.reduce((sum, b) => sum + b.k, 0)
     for (let s = 0; s < 4; s++) {
       idx[i * 4 + s] = best[s].c
       wts[i * 4 + s] = best[s].k / total
@@ -400,6 +450,7 @@ function bindSurface(parts: ProxyPart[], positions: Float32Array[], rest: Float3
 
 const STEP = 1 / 60
 const ITERATIONS = 3
+const POLAR_ITERATIONS = 3
 /** Below this speed (m per step) cloth also loses velocity to friction. */
 const SLOW = 0.0015
 const SLOW_KEEP = 0.85
@@ -408,6 +459,8 @@ const SLOW_KEEP = 0.85
  * shape and bending pull and leaves resting contact flickering between two states.
  */
 const CONTACT_RELAX = 0.6
+/** Offset (m) beyond which a garment's own panels are checked against each other. */
+const SELF_CONTACT_ABOVE = 0.01
 /** Fraction of velocity kept by a particle in contact with another garment, per step. */
 const CONTACT_KEEP = 0.2
 const TABLE = 8192
@@ -431,12 +484,18 @@ export class ClothSim {
   /** Goals at the previous frame: substeps interpolate between the two. */
   private lastTarget: Float32Array[]
   private lastBody: THREE.Matrix4[]
-  /** Each band's rotation (xyzw per band), warm start for the next polar decomposition. */
-  private bandRotation: Float32Array[]
+  /** Each region's rotation (xyzw), warm start for the next polar decomposition. */
+  private regionRotation: Float32Array[]
   private anchor: Float32Array
   private sleep = 0
+  private awake = true
+  /** Time not yet simulated (s). */
+  private clock = 0
   /** Last step's activity, for debugging. */
   stats = { moving: false, speed: 0, offsetChange: 0 }
+  /** Moving average of the time one call to step() takes while active (ms). */
+  stepMs = 0
+  private timedSteps = 0
   // Spatial hash (counting sort) over all particles.
   private cellStart = new Int32Array(TABLE + 1)
   private cellEntries: Int32Array
@@ -444,6 +503,11 @@ export class ClothSim {
   private particleOf: Int32Array
   /** Particles that touched another garment this step (flat index g * n + i). */
   private touched: Uint8Array
+  /** Flat indices of the particles that can touch something this step. */
+  private candidates: Int32Array
+  private boxes: Float32Array
+  /** Garments bent enough last frame that their front could meet their back. */
+  private deformed: boolean[]
   private offsets: Float32Array
   private smoothed: Float32Array
 
@@ -468,10 +532,10 @@ export class ClothSim {
     this.target = Array.from({ length: garments }, () => new Float32Array(n * 3))
     this.lastTarget = Array.from({ length: garments }, () => new Float32Array(n * 3))
     this.lastBody = Array.from({ length: garments }, () => new THREE.Matrix4())
-    const bandCount = topology.bandStart.length - 1
-    this.bandRotation = Array.from({ length: garments }, () => {
-      const q = new Float32Array(bandCount * 4)
-      for (let b = 0; b < bandCount; b++) q[b * 4 + 3] = 1
+    const regionCount = topology.regionStart.length - 1
+    this.regionRotation = Array.from({ length: garments }, () => {
+      const q = new Float32Array(regionCount * 4)
+      for (let r = 0; r < regionCount; r++) q[r * 4 + 3] = 1
       return q
     })
     this.anchor = new Float32Array(garments * 3).fill(NaN)
@@ -479,6 +543,9 @@ export class ClothSim {
     this.garmentOf = new Int32Array(n * garments)
     this.particleOf = new Int32Array(n * garments)
     this.touched = new Uint8Array(n * garments)
+    this.candidates = new Int32Array(n * garments)
+    this.boxes = new Float32Array(garments * 6)
+    this.deformed = Array.from({ length: garments }, () => false)
     this.offsets = new Float32Array(n * 3)
     this.smoothed = new Float32Array(n * 3)
     for (let g = 0; g < garments; g++) {
@@ -487,6 +554,11 @@ export class ClothSim {
         this.particleOf[g * n + i] = i
       }
     }
+  }
+
+  /** True once enough steps have run slower than SLOW_STEP_MS on average. */
+  get slow() {
+    return this.timedSteps >= 60 && this.stepMs > SLOW_STEP_MS
   }
 
   /** Wake the simulation (e.g. after something moved the garments). */
@@ -502,8 +574,13 @@ export class ClothSim {
    */
   step(dt: number, bodies: THREE.Matrix4[], follow: boolean[], inertia?: number[]) {
     const { count: n, rest, profile } = this.topology
-    const frame = Math.min(dt, 1 / 20)
-    const substeps = Math.max(1, Math.round(frame / STEP))
+    // Fixed 1/60 s steps from accumulated time: a 120 Hz display steps every other frame
+    // instead of running the cloth at double speed.
+    this.clock = Math.min(this.clock + dt, 1 / 20)
+    const substeps = Math.floor(this.clock / STEP + 1e-6)
+    if (substeps === 0) return this.awake
+    this.clock -= substeps * STEP
+    const began = performance.now()
     const v = new THREE.Vector3()
     let moving = false
 
@@ -511,11 +588,14 @@ export class ClothSim {
     for (let g = 0; g < this.garments; g++) {
       const t = this.target[g]
       const m = bodies[g]
-      for (let i = 0; i < n; i++) {
-        v.set(rest[i * 3], rest[i * 3 + 1], rest[i * 3 + 2]).applyMatrix4(m)
-        t[i * 3] = v.x
-        t[i * 3 + 1] = v.y
-        t[i * 3 + 2] = v.z
+      const e = m.elements
+      for (let j = 0; j < n * 3; j += 3) {
+        const x = rest[j]
+        const y = rest[j + 1]
+        const z = rest[j + 2]
+        t[j] = e[0] * x + e[4] * y + e[8] * z + e[12]
+        t[j + 1] = e[1] * x + e[5] * y + e[9] * z + e[13]
+        t[j + 2] = e[2] * x + e[6] * y + e[10] * z + e[14]
       }
       const a = this.anchor
       const jump = Number.isNaN(a[g * 3]) || Math.hypot(t[0] - a[g * 3], t[1] - a[g * 3 + 1], t[2] - a[g * 3 + 2]) > 0.3
@@ -532,7 +612,7 @@ export class ClothSim {
       a[g * 3 + 1] = t[1]
       a[g * 3 + 2] = t[2]
     }
-    if (!moving && this.sleep > 30) return false
+    if (!moving && this.sleep > 30) return (this.awake = false)
 
     let speed = 0
     for (let s = 0; s < substeps; s++) {
@@ -624,8 +704,10 @@ export class ClothSim {
         raw.set(smooth)
       }
       const data = this.textures[g].image.data as Float32Array
+      let largest = 0
       for (let i = 0; i < n; i++) {
         const len = Math.sqrt(raw[i * 3] ** 2 + raw[i * 3 + 1] ** 2 + raw[i * 3 + 2] ** 2)
+        largest = Math.max(largest, len)
         v.set(raw[i * 3], raw[i * 3 + 1], raw[i * 3 + 2]).transformDirection(inverse)
         v.multiplyScalar(Math.min(len, profile.maxOffset))
         offsetChange = Math.max(offsetChange, Math.abs(data[i * 4] - v.x), Math.abs(data[i * 4 + 1] - v.y), Math.abs(data[i * 4 + 2] - v.z))
@@ -635,6 +717,7 @@ export class ClothSim {
       }
       this.textures[g].needsUpdate = true
       this.writeGradients(g, data)
+      this.deformed[g] = largest > SELF_CONTACT_ABOVE
     }
 
     // Judge rest by how much the rendered offsets still change: resting contact keeps a small
@@ -642,7 +725,10 @@ export class ClothSim {
     const active = moving || offsetChange > 3e-5
     this.stats = { moving, speed, offsetChange }
     this.sleep = active ? 0 : this.sleep + 1
-    return active || this.sleep <= 30
+    const ms = performance.now() - began
+    this.timedSteps++
+    this.stepMs += (ms - this.stepMs) / Math.min(this.timedSteps, 30)
+    return (this.awake = active || this.sleep <= 30)
   }
 
   private solveEdges(g: number, edges: Uint32Array, restLength: Float32Array, stiffness: number) {
@@ -741,30 +827,23 @@ export class ClothSim {
   private inverse = new THREE.Matrix4()
 
   /**
-   * Shape matching per band (Müller et al. 2005): find the rotation that best maps the band's
+   * Shape matching per region (Müller et al. 2005): find the rotation that best maps the region's
    * drape onto where its particles are now, and pull them toward that rotated drape. The
    * rotation comes from a few warm-started iterations of Müller et al. 2016.
    */
   private solveShape(g: number, along: number) {
-    const { bandStart, bands, invMass, profile } = this.topology
+    const { regionStart, regions, invMass, profile } = this.topology
     const x = this.x[g]
     const t = this.target[g]
     const last = this.lastTarget[g]
-    const rot = this.bandRotation[g]
-    const q = this.q
-    const qa = this.qa
-    const r0 = this.r0
-    const r1 = this.r1
-    const r2 = this.r2
-    const omega = this.omega
-    const e = this.m3.elements
-    for (let b = 0; b < bandStart.length - 1; b++) {
-      const from = bandStart[b]
-      const to = bandStart[b + 1]
+    const rot = this.regionRotation[g]
+    for (let r = 0; r < regionStart.length - 1; r++) {
+      const from = regionStart[r]
+      const to = regionStart[r + 1]
       // Centroids of the drape (goal, interpolated like the integration) and of the cloth.
       let gx = 0, gy = 0, gz = 0, cx = 0, cy = 0, cz = 0
       for (let m = from; m < to; m++) {
-        const j = bands[m] * 3
+        const j = regions[m] * 3
         gx += last[j] + (t[j] - last[j]) * along
         gy += last[j + 1] + (t[j + 1] - last[j + 1]) * along
         gz += last[j + 2] + (t[j + 2] - last[j + 2]) * along
@@ -777,7 +856,7 @@ export class ClothSim {
       // A = Σ (x - c)(goal - g)ᵀ, columns a0..a2.
       let a00 = 0, a01 = 0, a02 = 0, a10 = 0, a11 = 0, a12 = 0, a20 = 0, a21 = 0, a22 = 0
       for (let m = from; m < to; m++) {
-        const j = bands[m] * 3
+        const j = regions[m] * 3
         const px = x[j] - cx
         const py = x[j + 1] - cy
         const pz = x[j + 2] - cz
@@ -788,53 +867,52 @@ export class ClothSim {
         a10 += py * ux; a11 += py * uy; a12 += py * uz
         a20 += pz * ux; a21 += pz * uy; a22 += pz * uz
       }
-      q.set(rot[b * 4], rot[b * 4 + 1], rot[b * 4 + 2], rot[b * 4 + 3])
-      for (let k = 0; k < 6; k++) {
-        this.m4.makeRotationFromQuaternion(q)
-        const me = this.m4.elements
-        r0.set(me[0], me[1], me[2])
-        r1.set(me[4], me[5], me[6])
-        r2.set(me[8], me[9], me[10])
-        const dot = r0.x * a00 + r0.y * a10 + r0.z * a20 + r1.x * a01 + r1.y * a11 + r1.z * a21 + r2.x * a02 + r2.y * a12 + r2.z * a22
-        omega.set(r0.y * a20 - r0.z * a10, r0.z * a00 - r0.x * a20, r0.x * a10 - r0.y * a00)
-        omega.x += r1.y * a21 - r1.z * a11
-        omega.y += r1.z * a01 - r1.x * a21
-        omega.z += r1.x * a11 - r1.y * a01
-        omega.x += r2.y * a22 - r2.z * a12
-        omega.y += r2.z * a02 - r2.x * a22
-        omega.z += r2.x * a12 - r2.y * a02
-        omega.multiplyScalar(1 / (Math.abs(dot) + 1e-9))
-        const w = omega.length()
-        if (w < 1e-7) break
-        qa.setFromAxisAngle(omega.divideScalar(w), w)
-        q.premultiply(qa).normalize()
+      // Polar decomposition (Müller et al. 2016), warm-started from last step's rotation, so
+      // a few iterations suffice. Quaternion q, rotation columns c0..c2, all inline.
+      let qx = rot[r * 4], qy = rot[r * 4 + 1], qz = rot[r * 4 + 2], qw = rot[r * 4 + 3]
+      let c00 = 1, c01 = 0, c02 = 0, c10 = 0, c11 = 1, c12 = 0, c20 = 0, c21 = 0, c22 = 1
+      for (let k = 0; k <= POLAR_ITERATIONS; k++) {
+        c00 = 1 - 2 * (qy * qy + qz * qz); c01 = 2 * (qx * qy + qw * qz); c02 = 2 * (qx * qz - qw * qy)
+        c10 = 2 * (qx * qy - qw * qz); c11 = 1 - 2 * (qx * qx + qz * qz); c12 = 2 * (qy * qz + qw * qx)
+        c20 = 2 * (qx * qz + qw * qy); c21 = 2 * (qy * qz - qw * qx); c22 = 1 - 2 * (qx * qx + qy * qy)
+        if (k === POLAR_ITERATIONS) break
+        const dot = c00 * a00 + c01 * a10 + c02 * a20 + c10 * a01 + c11 * a11 + c12 * a21 + c20 * a02 + c21 * a12 + c22 * a22
+        const scale = 1 / (Math.abs(dot) + 1e-9)
+        // ω = Σ c_k × a_k / |Σ c_k · a_k|
+        const ox = (c01 * a20 - c02 * a10 + c11 * a21 - c12 * a11 + c21 * a22 - c22 * a12) * scale
+        const oy = (c02 * a00 - c00 * a20 + c12 * a01 - c10 * a21 + c22 * a02 - c20 * a22) * scale
+        const oz = (c00 * a10 - c01 * a00 + c10 * a11 - c11 * a01 + c20 * a12 - c21 * a02) * scale
+        const w = Math.sqrt(ox * ox + oy * oy + oz * oz)
+        if (w < 1e-7) {
+          k = POLAR_ITERATIONS - 1
+          continue
+        }
+        const sh = Math.sin(w / 2) / w
+        const ax = ox * sh, ay = oy * sh, az = oz * sh, aw = Math.cos(w / 2)
+        const nx = ax * qw + aw * qx + ay * qz - az * qy
+        const ny = ay * qw + aw * qy + az * qx - ax * qz
+        const nz = az * qw + aw * qz + ax * qy - ay * qx
+        const nw = aw * qw - ax * qx - ay * qy - az * qz
+        const len = Math.sqrt(nx * nx + ny * ny + nz * nz + nw * nw)
+        qx = nx / len; qy = ny / len; qz = nz / len; qw = nw / len
       }
-      rot[b * 4] = q.x
-      rot[b * 4 + 1] = q.y
-      rot[b * 4 + 2] = q.z
-      rot[b * 4 + 3] = q.w
-      this.m3.setFromMatrix4(this.m4.makeRotationFromQuaternion(q))
+      rot[r * 4] = qx
+      rot[r * 4 + 1] = qy
+      rot[r * 4 + 2] = qz
+      rot[r * 4 + 3] = qw
       for (let m = from; m < to; m++) {
-        const i = bands[m]
+        const i = regions[m]
         if (invMass[i] === 0) continue
         const j = i * 3
         const ux = last[j] + (t[j] - last[j]) * along - gx
         const uy = last[j + 1] + (t[j + 1] - last[j + 1]) * along - gy
         const uz = last[j + 2] + (t[j + 2] - last[j + 2]) * along - gz
-        x[j] += (cx + e[0] * ux + e[3] * uy + e[6] * uz - x[j]) * profile.shape
-        x[j + 1] += (cy + e[1] * ux + e[4] * uy + e[7] * uz - x[j + 1]) * profile.shape
-        x[j + 2] += (cz + e[2] * ux + e[5] * uy + e[8] * uz - x[j + 2]) * profile.shape
+        x[j] += (cx + c00 * ux + c10 * uy + c20 * uz - x[j]) * profile.shape
+        x[j + 1] += (cy + c01 * ux + c11 * uy + c21 * uz - x[j + 1]) * profile.shape
+        x[j + 2] += (cz + c02 * ux + c12 * uy + c22 * uz - x[j + 2]) * profile.shape
       }
     }
   }
-  private q = new THREE.Quaternion()
-  private qa = new THREE.Quaternion()
-  private r0 = new THREE.Vector3()
-  private r1 = new THREE.Vector3()
-  private r2 = new THREE.Vector3()
-  private omega = new THREE.Vector3()
-  private m3 = new THREE.Matrix3()
-  private m4 = new THREE.Matrix4()
 
   private cellHash(ix: number, iy: number, iz: number) {
     return Math.abs((ix * 92837111) ^ (iy * 689287499) ^ (iz * 283923481)) % TABLE
@@ -851,23 +929,62 @@ export class ClothSim {
    */
   private solveCollisions(follow: boolean[]) {
     const n = this.topology.count
-    const total = n * this.garments
+    const { invMass, rest } = this.topology
+    const reach = 2 * this.topology.profile.radius
+    // Broad phase: only particles inside the overlap of two garments' boxes can meet another
+    // garment; a garment's own panels only meet when it is bent.
+    const box = this.boxes
+    for (let g = 0; g < this.garments; g++) {
+      const x = this.x[g]
+      box[g * 6] = box[g * 6 + 1] = box[g * 6 + 2] = Infinity
+      box[g * 6 + 3] = box[g * 6 + 4] = box[g * 6 + 5] = -Infinity
+      for (let j = 0; j < n * 3; j += 3) {
+        for (let c = 0; c < 3; c++) {
+          box[g * 6 + c] = Math.min(box[g * 6 + c], x[j + c])
+          box[g * 6 + 3 + c] = Math.max(box[g * 6 + 3 + c], x[j + c])
+        }
+      }
+    }
+    const overlaps = (a: number, b: number) =>
+      box[a * 6] - reach < box[b * 6 + 3] && box[b * 6] - reach < box[a * 6 + 3] &&
+      box[a * 6 + 1] - reach < box[b * 6 + 4] && box[b * 6 + 1] - reach < box[a * 6 + 4] &&
+      box[a * 6 + 2] - reach < box[b * 6 + 5] && box[b * 6 + 2] - reach < box[a * 6 + 5]
+    let total = 0
+    for (let g = 0; g < this.garments; g++) {
+      const others: number[] = []
+      for (let h = 0; h < this.garments; h++) if (h !== g && overlaps(g, h)) others.push(h)
+      if (!others.length && !this.deformed[g]) continue
+      const x = this.x[g]
+      for (let i = 0; i < n; i++) {
+        let take = this.deformed[g]
+        for (let o = 0; o < others.length && !take; o++) {
+          const h = others[o]
+          take =
+            x[i * 3] > box[h * 6] - reach && x[i * 3] < box[h * 6 + 3] + reach &&
+            x[i * 3 + 1] > box[h * 6 + 1] - reach && x[i * 3 + 1] < box[h * 6 + 4] + reach &&
+            x[i * 3 + 2] > box[h * 6 + 2] - reach && x[i * 3 + 2] < box[h * 6 + 5] + reach
+        }
+        if (take) this.candidates[total++] = g * n + i
+      }
+    }
+    if (!total) return
     const start = this.cellStart
     start.fill(0)
-    for (let k = 0; k < total; k++) {
+    for (let m = 0; m < total; m++) {
+      const k = this.candidates[m]
       const x = this.x[this.garmentOf[k]]
       const i = this.particleOf[k]
       start[this.hash(x[i * 3], x[i * 3 + 1], x[i * 3 + 2])]++
     }
     for (let c = 1; c <= TABLE; c++) start[c] += start[c - 1]
-    for (let k = 0; k < total; k++) {
+    for (let m = 0; m < total; m++) {
+      const k = this.candidates[m]
       const x = this.x[this.garmentOf[k]]
       const i = this.particleOf[k]
       this.cellEntries[--start[this.hash(x[i * 3], x[i * 3 + 1], x[i * 3 + 2])]] = k
     }
-    const { invMass, rest } = this.topology
-    const reach = 2 * this.topology.profile.radius
-    for (let k = 0; k < total; k++) {
+    for (let m = 0; m < total; m++) {
+      const k = this.candidates[m]
       const ga = this.garmentOf[k]
       const ia = this.particleOf[k]
       const xa = this.x[ga]
@@ -886,7 +1003,7 @@ export class ClothSim {
           if (own && kb <= k) continue
           const ib = this.particleOf[kb]
           if (gb === ga) {
-            if (ib === ia) continue
+            if (ib === ia || !this.deformed[ga]) continue
             const rx = rest[ib * 3] - rest[ia * 3]
             const ry = rest[ib * 3 + 1] - rest[ia * 3 + 1]
             const rz = rest[ib * 3 + 2] - rest[ia * 3 + 2]
