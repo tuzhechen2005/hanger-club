@@ -1,19 +1,19 @@
 # Blender 资产管线
 
 契约：`docs/asset-spec.md`；任务：`docs/codex-blender-prompt.md`。
-本轮使用 Blender 5.2.1 LTS，分支 `codex/blender-assets`。目标视频观察、资料与实验记录见 `docs/blender-research.md`。
+本轮使用 Blender 5.2.1 LTS（Windows）与 5.2.2 LTS（macOS，M4），分支 `codex/blender-assets`。目标视频观察、资料与实验记录见 `docs/blender-research.md`。
 
 ## 运行顺序
 
-在仓库根目录运行。`blender` 替换为本机可执行文件；`python` 需要 Pillow、NumPy。
+在仓库根目录运行。`blender` 替换为本机可执行文件（macOS：`/Applications/Blender.app/Contents/MacOS/Blender`）；`python` 需要 3.10+ 与 Pillow、NumPy。
 路径由 `pathlib` 根据脚本位置推导，不依赖机器绝对路径。
 
 ```powershell
 blender -b --factory-startup --python-exit-code 1 -P tools/blender/preflight.py
 blender -b --factory-startup --python-exit-code 1 -P tools/blender/build_hanger.py
-blender -b --factory-startup --python-exit-code 1 -P tools/blender/build_tee.py -- --frames 73 --bend 0.25 --drape-support 0.33
+blender -b --factory-startup --python-exit-code 1 -P tools/blender/build_tee.py
 python tools/blender/make_product_texture.py --slug shirt3
-blender -b --factory-startup --python-exit-code 1 -P tools/blender/bake_clips.py -- --warmup 73 --motion-support 0.80
+blender -b --factory-startup --python-exit-code 1 -P tools/blender/bake_clips.py
 python tools/blender/validate_assets.py
 blender -b --factory-startup --python-exit-code 1 -P tools/blender/audit_geometry.py
 blender -b --factory-startup --python-exit-code 1 -P tools/blender/render_checks.py
@@ -24,7 +24,20 @@ python tools/blender/make_report.py
 每步实际耗时、命令、逐项结果与已知问题汇总在 `assets-src/reports/tee/report.json` 和 `checklist.md`。
 脚本内部耗时包含自身渲染。改变版型后必须重新生成贴图、动画和验收材料。
 
-## 网格与模拟
+## 当前方案：`gravity`（默认）
+
+`build_tee.py` 与 `bake_clips.py` 的默认参数就是正式资产所用参数，上面的命令不需要额外参数。
+
+- **固定点**：只固定压在衣架顶面上的肩缝线（|x| 0.115–0.215 m，木身顶面上方 8 mm）。其余部分由重力和布料求解器决定。
+- **起始形状**：按"挂好"的样子摆放。肩线顺衣架斜度、过衣架末端后塌落；袖子下垂约 58°、压扁；前后片只留出越过衣架所需的间距；前领口前移 3 cm。没有手工雕刻的褶皱。
+- **弱整形约束**：衣身 `--drape-support 0.15` 向下摆递减到 30%，袖子再乘 0.3，领口罗纹 `--collar-support 0.9`。约束只保持姿态，褶皱由求解器产生。
+- **布料**：顶点质量 0.035、tension 60、compression 40、shear 20、bending 1.5；缝线（肩缝、侧缝、袖窿、领口）弯曲刚度 ×5，模拟双层缝份。参数是视觉调节值，没有完成克重标定。
+- **褶痕修正**（`shells.py`）：模拟后加上与导出完全相同的 2 mm Solidify，只对内外层确实交叉的三角形周围做局部平滑，直到交叉为零。静态与每个动画帧都执行；报告记录移动的顶点数和最大位移。
+- **动画**：预跑 120 帧。`MotionSupport` 权重 0.8；衣架静止时约束刚度为 1，移动和转身期间关键帧降到 `--motion-stiffness 0.3`，落定前再升回 1。距木身 1.2 cm 内的布料完全跟随衣架。`return` 最后 8 帧平滑并入基础姿态（`--settle-blend 8`），网页切回静态模型时零跳变。
+
+旧的 `baseline`（强约束）与 `sewn`（缝合弹簧）仍可用 `--profile` 选择，仅供对照。
+
+## 网格与模拟（版片部分，两种方案共用）
 
 默认尺寸来自契约；`assets-src/photos/<slug>-measurements.json` 可覆盖默认值。
 前片、后片、两袖、领口五个参数化版片按匹配边界顶点在模拟前连接。
@@ -41,7 +54,7 @@ python tools/blender/make_report.py
 
 ## 动画与材质
 
-预跑 72 帧，再连续模拟 lift 36 帧、return 30 帧。67 个样本对应基础姿态加 66 个形变目标。
+预跑 120 帧，再连续模拟 lift 36 帧、return 30 帧。67 个样本对应基础姿态加 66 个形变目标。
 `HookPivot` 携带位移和完整转动，形变保存在衣架局部坐标中。两个 NLA 动画各从 0 秒开始导出。
 return 起始与 lift 结束共用同一样本；return 结束与基础网格的残差记录在报告中。
 静态文件从实际动画 GLB 去掉动画和形变数据，基础属性、索引逐项比较一致。

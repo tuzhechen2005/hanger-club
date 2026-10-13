@@ -29,8 +29,13 @@ def main():
     for name, angle in (("front", 0), ("back", math.pi), ("left", -math.pi / 2),
                         ("right", math.pi / 2), ("front-three-quarter", -.65), ("back-three-quarter", math.pi - .65)):
         render(args.output / f"{name}.png", camera, angle, elevation=0)
+    # Frame the cuff wherever the drape left it: the outermost point of the left sleeve.
+    evaluated = garment.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    tip = min((garment.matrix_world @ v.co for v in evaluated.to_mesh().vertices), key=lambda co: co.x)
+    evaluated.to_mesh_clear()
+    cuff = (tip.x + .05, 0, tip.z + .02)
     for name, target, width, angle in (("detail-neck", (0, 0, -.15), .36, -.15),
-                                      ("detail-cuff", (-.38, 0, -.40), .28, -.35),
+                                      ("detail-cuff", cuff, .28, -.35),
                                       ("detail-hem", (0, 0, -.76), .56, -.12)):
         camera.data.ortho_scale = width
         render(args.output / f"{name}.png", camera, angle, target=target, elevation=0)

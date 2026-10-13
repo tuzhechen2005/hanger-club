@@ -1,22 +1,25 @@
 {
-  "blender_version": "5.2.1 LTS",
-  "warmup_frames": 72,
+  "blender_version": "5.2.2 LTS",
+  "warmup_frames": 120,
   "shape_targets": 66,
   "clips": {
     "lift": 1.5,
     "return": 1.25
   },
   "relative_frame_vertex_max_velocities_m_s": {
-    "73": 0.0040034218691289425,
-    "109": 0.00457189604640007,
-    "139": 0.005242808256298304
+    "121": 0.004915004596114159,
+    "157": 0.007216157391667366,
+    "187": 0.012496822513639927
   },
-  "max_relative_displacement_m": 0.025155194103717804,
+  "max_relative_displacement_m": 0.015919934958219528,
+  "crease_relaxation_max_shift_m": 0.0,
   "motion_support": 0.8,
+  "motion_stiffness_while_moving": 0.3,
+  "return_settle_blend_frames": 8,
   "clip_boundary_sample": "Both clips reference the same simulated sample 36 at the transition",
-  "return_end_base_rms_m": 1.4660855413239915e-05,
-  "return_end_base_max_m": 0.0005096967797726393,
-  "elapsed_seconds": 22.547,
+  "return_end_base_rms_m": 0.0,
+  "return_end_base_max_m": 0.0,
+  "elapsed_seconds": 84.004,
   "static_export_method": "Prune animation/target buffers from the exact animated GLB; base attributes and indices are unchanged",
   "known_issues": [
     "Solver parameters are tuned for visual medium cotton, not physically calibrated",

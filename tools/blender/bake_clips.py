@@ -10,7 +10,9 @@ from common import *
 from build_tee import cloth_settings, evaluated_vertices, solidify
 from materials import shared_materials
 from glb import static_derivative
+from shells import ShellProbe
 import numpy as np
+from mathutils.bvhtree import BVHTree
 
 
 def smooth(t):
@@ -65,8 +67,10 @@ def set_linear(action):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source", type=Path, default=SOURCES / "tee_drape.blend")
-    parser.add_argument("--warmup", type=int, default=73)
+    parser.add_argument("--warmup", type=int, default=121)
     parser.add_argument("--experiment", help="Isolated clip trial name")
+    parser.add_argument("--settle-blend", type=int, default=8, help="Ease the last N return frames onto the base pose")
+    parser.add_argument("--motion-stiffness", type=float, default=.3, help="Goal stiffness while the hanger moves; rests stay at 1")
     parser.add_argument("--motion-support", type=float, default=.80, help="Soft rest-shape support for stable web transitions (0..1)")
     args = parser.parse_args(sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else [])
     if args.warmup < 73:
@@ -103,6 +107,9 @@ def main():
         pivot.keyframe_insert(data_path="rotation_euler", frame=frame)
     set_linear(pivot.animation_data.action)
     scene.frame_set(1)
+    wood = bpy.data.objects["HangerWood"]
+    wood_tree = BVHTree.FromPolygons([wood.matrix_world @ v.co for v in wood.data.vertices], [list(p.vertices) for p in wood.data.polygons])
+    garment_to_world = garment.matrix_world.copy()
     support = garment.vertex_groups.new(name="MotionSupport")
     original_pin = garment.vertex_groups.get("HangerSupport")
     for vertex in garment.data.vertices:
@@ -112,28 +119,63 @@ def main():
             original_weight = 0.
         vertical = max(0., min(1., (-vertex.co.z - .10) / .70))
         weight = max(original_weight, args.motion_support * (1 - .22 * vertical))
+        # Cloth lying on the hanger moves with it; letting it lag during the 360° turn
+        # only drives it into the wood.
+        if garment.get("solver_profile") == "gravity":
+            _, _, _, distance = wood_tree.find_nearest(garment_to_world @ vertex.co)
+            if distance is not None and distance < .012:
+                weight = 1.
         support.add([vertex.index], weight, "REPLACE")
     cloth = cloth_settings(garment, last_frame)
     cloth.settings.vertex_group_mass = support.name
-    solidify(garment)
+    if garment.get("solver_profile") == "gravity":
+        # The 360° turn moves the shoulders fast past the wood; more substeps keep
+        # cloth/hanger contact resolved. The static drape does not need this.
+        cloth.settings.quality = 20
+        cloth.collision_settings.collision_quality = 6
+    if args.motion_stiffness is not None:
+        # Hold the rest shape while the hanger is still, loosen it while it travels and
+        # turns so the cloth lags and swings, then tighten again so each clip settles back
+        # onto the base mesh (the web swaps to the static mesh when a clip ends).
+        w = args.warmup
+        lift_travel = w + round(1.1 * 24)
+        return_travel = w + 36 + round(.85 * 24)
+        keys = [(1, 1.), (w, 1.), (w + 3, args.motion_stiffness), (lift_travel, args.motion_stiffness), (w + 36, 1.),
+                (w + 39, args.motion_stiffness), (return_travel, args.motion_stiffness), (last_frame, 1.)]
+        for frame, value in keys:
+            cloth.settings.pin_stiffness = value
+            cloth.settings.keyframe_insert("pin_stiffness", frame=frame)
+    probe = ShellProbe(garment, solidify)
     samples, original_mesh, previous, velocities = [], None, None, {}
+    relaxed = []
     for frame in range(1, last_frame + 1):
         scene.frame_set(frame)
         points = evaluated_vertices(garment)
         assert np.isfinite(points).all()
         if frame >= args.warmup:
-            samples.append(points.copy())
+            # Relax only creases whose 2 mm shells would cross, then solidify exactly as exported.
+            single, solid, iterations, left = probe.resolve(points)
+            assert left == 0, f"frame {frame}: {left} solidified shell crossings remain"
+            relaxed.append(float(np.linalg.norm(single - points, axis=1).max()))
+            samples.append(solid)
             if original_mesh is None:
-                evaluated = garment.evaluated_get(bpy.context.evaluated_depsgraph_get())
-                mesh = evaluated.to_mesh(preserve_all_data_layers=True, depsgraph=bpy.context.evaluated_depsgraph_get())
-                original_mesh = mesh.copy()
-                evaluated.to_mesh_clear()
-            assert len(points) == len(samples[0]), "Topology changed during simulation"
+                original_mesh = probe.evaluated_mesh_copy(single)
+            assert len(solid) == len(samples[0]), "Topology changed during simulation"
         if frame in (args.warmup, args.warmup + 36, last_frame) and previous is not None:
             velocities[str(frame)] = float(np.max(np.linalg.norm(points - previous, axis=1)) * 24)
         if frame % 12 == 1 or frame == last_frame:
             print(f"CLIP frame={frame}/{last_frame} elapsed={time.perf_counter()-started:.1f}s", flush=True)
         previous = points.copy()
+    if args.settle_blend:
+        # The web swaps to the static base mesh when `return` ends, so its last frames
+        # ease exactly onto the base pose. The goal stiffness is already ramping up here.
+        n = args.settle_blend
+        for k in range(1, n + 1):
+            a = k / n
+            a = a * a * (3 - 2 * a)
+            i = len(samples) - n - 1 + k
+            samples[i] = samples[i] * (1 - a) + samples[0] * a
+    probe.remove()
     np.savez_compressed(out_sources / "tee_clip_samples.npz", positions=np.stack(samples))
     # Bake ambient occlusion in the stationary pose on the outer single layer.
     scene.frame_set(args.warmup)
@@ -199,7 +241,8 @@ def main():
         "shape_targets": len(blocks), "clips": {"lift": 1.5, "return": 1.25},
         "relative_frame_vertex_max_velocities_m_s": velocities,
         "max_relative_displacement_m": float(relative_displacement.max()),
-        "motion_support": args.motion_support,
+        "crease_relaxation_max_shift_m": max(relaxed) if relaxed else 0.,
+        "motion_support": args.motion_support, "motion_stiffness_while_moving": args.motion_stiffness, "return_settle_blend_frames": args.settle_blend,
         "clip_boundary_sample": "Both clips reference the same simulated sample 36 at the transition",
         "return_end_base_rms_m": float(np.sqrt(np.mean((samples[-1] - samples[0]) ** 2))),
         "return_end_base_max_m": float(np.linalg.norm(samples[-1] - samples[0], axis=1).max()),

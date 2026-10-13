@@ -1,5 +1,5 @@
 {
-  "blender_version": "5.2.1 LTS",
+  "blender_version": "5.2.2 LTS",
   "meshes": {
     "HangerHook": {
       "vertices": 852,
@@ -34,7 +34,7 @@
       }
     }
   },
-  "elapsed_seconds": 4.096,
+  "elapsed_seconds": 2.821,
   "source": "Original scripted wood and hook; original generated wood texture; studio area lights, no HDRI",
   "origin": "Inner crown contact (0,0,0), hook metal top approximately +0.004 m",
   "checks": {

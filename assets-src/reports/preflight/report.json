@@ -1,7 +1,7 @@
 {
   "stage": "preflight",
-  "blender_version": "5.2.1 LTS",
-  "blender_build_hash": "9e2066aef7ef",
+  "blender_version": "5.2.2 LTS",
+  "blender_build_hash": "d13f752e3b9c",
   "checks": {
     "blender_at_least_4_2": true,
     "background_mode": true,
@@ -32,7 +32,7 @@
     }
   ],
   "measurements_provided": false,
-  "elapsed_seconds": 0.094,
+  "elapsed_seconds": 0.04,
   "asset_acceptance_status": "not_started",
   "spec_decision": "Approved 2026-10-12: hook metal may rise 0.004 m above the contact-point origin."
 }

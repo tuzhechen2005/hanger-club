@@ -1,8 +1,8 @@
 {
-  "blender_version": "5.2.1 LTS",
-  "elapsed_seconds": 33.006,
-  "source": "D:/个人资料/徐吉良/Documents/ChatGPT/HangerClub/assets-src/blender/tee_animated.blend",
-  "reimported_model": "D:/个人资料/徐吉良/Documents/ChatGPT/HangerClub/public/models/tee_anim.glb",
+  "blender_version": "5.2.2 LTS",
+  "elapsed_seconds": 53.795,
+  "source": "/Users/tuzhechen/Documents/Codex/2026-10-12/kan/outputs/hanger-club-blender/assets-src/blender/tee_animated.blend",
+  "reimported_model": "/Users/tuzhechen/Documents/Codex/2026-10-12/kan/outputs/hanger-club-blender/public/models/tee_anim.glb",
   "lighting": "Original area-light studio; no external HDRI",
   "product_texture": "shirt3",
   "view_count": 6,
