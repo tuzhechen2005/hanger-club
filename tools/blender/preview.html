@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hanger Club · 资产检查</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#ecebe4;color:#242725;font:14px system-ui}main{max-width:1100px;margin:auto;padding:24px}header{display:flex;align-items:center;justify-content:space-between;gap:16px}h1{font:italic 28px Georgia;margin:0}#stage{height:min(75vh,800px);min-height:400px}canvas{display:block;width:100%;height:100%;touch-action:none}nav{display:flex;flex-wrap:wrap;gap:8px;align-items:center}button{border:1px solid #b2b2aa;border-radius:24px;background:transparent;color:inherit;padding:9px 18px;cursor:pointer}button:hover,button.active{background:#262b27;color:#ecebe4}input{flex:1;min-width:140px;accent-color:#333c33}p{color:#666b61;line-height:1.6}#status{font-size:12px}#error{color:#9c2525;white-space:pre-wrap}
+</style>
+<main><header><h1>Hanger Club</h1><span>shirt3 · 3D 资产检查</span></header>
+<div id="stage"></div><nav>
+<button data-view="front">正面</button><button data-view="back">背面</button><button data-view="side">侧面</button>
+<button data-clip="lift">提起 / 转身</button><button data-clip="return">挂回</button><button id="rest">静止</button>
+<input id="time" type="range" min="0" max="1.5" step="0.001" value="0" aria-label="动画进度"><span id="clock">0.00 s</span></nav>
+<p>拖动查看任意角度，滚轮缩放。这里加载实际导出的 GLB 和商品贴图。<br><span id="status">加载资产中…</span></p><pre id="error"></pre></main>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.186.1/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+const stage=document.querySelector('#stage'), status=document.querySelector('#status'), slider=document.querySelector('#time');
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor('#ecebe4');renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1;stage.append(renderer.domElement);
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.01,30);camera.position.set(0,-.35,2.1);
+const controls=new OrbitControls(camera,renderer.domElement);controls.target.set(0,-.42,.04);controls.enableDamping=true;controls.minDistance=.45;controls.maxDistance=4;
+const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.35;
+scene.add(new THREE.HemisphereLight(0xffffff,0x777267,.45));
+const light=new THREE.DirectionalLight(0xffffff,3.2);light.position.set(-3,3,3);scene.add(light);
+let mixer,clips,current,playing=false,loaded;const timer=new THREE.Clock();
+function resize(){renderer.setSize(stage.clientWidth,stage.clientHeight);camera.aspect=stage.clientWidth/stage.clientHeight;camera.updateProjectionMatrix()}new ResizeObserver(resize).observe(stage);resize();
+function seek(t){if(!current)return;current.paused=false;current.time=0;mixer.setTime(t);current.paused=true;slider.value=t;document.querySelector('#clock').textContent=t.toFixed(2)+' s'}
+function selectClip(name,autoplay=true){mixer.stopAllAction();current=mixer.clipAction(clips[name]);current.reset().setLoop(THREE.LoopOnce,1);current.clampWhenFinished=true;current.play();slider.max=clips[name].duration;slider.value=0;playing=autoplay;seek(0);document.querySelectorAll('[data-clip]').forEach(b=>b.classList.toggle('active',b.dataset.clip===name))}
+try{
+ const trial=new URLSearchParams(location.search).get('trial');
+ const model=trial&&/^[a-z0-9-]+$/.test(trial)?`../../assets-src/experiments/${trial}/models/tee_anim.glb`:'../../public/models/tee_anim.glb';
+ const gltf=await new GLTFLoader().loadAsync(model);loaded=gltf;scene.add(gltf.scene);
+ const base=await new THREE.TextureLoader().loadAsync('../../public/products/shirt3/basecolor.png');base.flipY=false;base.colorSpace=THREE.SRGBColorSpace;base.anisotropy=renderer.capabilities.getMaxAnisotropy();
+ gltf.scene.traverse(o=>{if(!o.isMesh)return;for(const material of Array.isArray(o.material)?o.material:[o.material]){if(material.name==='Fabric'||material.name==='FabricInner'){material.map=base;material.color.setScalar(material.name==='FabricInner'?.72:1);material.needsUpdate=true}}});
+ clips=Object.fromEntries(gltf.animations.map(c=>[c.name,c]));mixer=new THREE.AnimationMixer(gltf.scene);selectClip('lift',false);
+ status.textContent=`${trial?'实验版本 '+trial:'实际 GLB'} · ${Object.keys(clips).join(' / ')} · 66 个形变目标 · 可拖动检查`;
+ window.assetReview={gltf,mixer,clips,selectClip,seek};
+}catch(error){document.querySelector('#error').textContent=String(error);status.textContent='加载失败，请查看错误信息';}
+document.querySelectorAll('[data-clip]').forEach(b=>b.onclick=()=>selectClip(b.dataset.clip));
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{const v=b.dataset.view;camera.position.set(v==='side'?2.1:0,-.35,v==='back'?-2.1:v==='side'?0:2.1);controls.target.set(0,-.42,.04);controls.update()});
+document.querySelector('#rest').onclick=()=>{selectClip('lift',false);seek(0)};
+slider.oninput=()=>{playing=false;seek(Number(slider.value))};
+renderer.setAnimationLoop(()=>{const dt=timer.getDelta();if(playing&&current){const t=Math.min(Number(slider.value)+dt,Number(slider.max));seek(t);if(t>=Number(slider.max))playing=false}controls.update();renderer.render(scene,camera)});
+</script></html>

@@ -1,0 +1,11 @@
+{
+  "blender_version": "5.2.2 LTS",
+  "elapsed_seconds": 53.795,
+  "source": "/Users/tuzhechen/Documents/Codex/2026-10-12/kan/outputs/hanger-club-blender/assets-src/blender/tee_animated.blend",
+  "reimported_model": "/Users/tuzhechen/Documents/Codex/2026-10-12/kan/outputs/hanger-club-blender/public/models/tee_anim.glb",
+  "lighting": "Original area-light studio; no external HDRI",
+  "product_texture": "shirt3",
+  "view_count": 6,
+  "clip_sample_interval_frames": 4,
+  "background_postprocess": "compose_reports.py composites alpha onto exact #ecebe4"
+}

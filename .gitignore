@@ -3,5 +3,9 @@ dist/
 .DS_Store
 *.log
 *.blend1
+__pycache__/
+*.pyc
+assets-src/experiments/
+assets-src/reference-local/
 # Third-party reference recording; keep local only
 example_video.mp4

@@ -1,0 +1,112 @@
+{
+  "checks": {
+    "static_has_no_morph_targets": true,
+    "same_primitive_count": true,
+    "base_attributes_identical": true,
+    "indices_identical": true,
+    "garment_vertices_at_most_10000": true,
+    "garment_triangles_at_most_20000": true,
+    "same_target_count_per_primitive": true,
+    "required_nodes": true,
+    "root_hierarchy": true,
+    "hanger_hierarchy": true,
+    "fabric_material_slots": true,
+    "front_uv_upright_and_nonmirrored": true,
+    "back_uv_upright_and_nonmirrored": true,
+    "front_faces_gltf_positive_z": true,
+    "animation_names": true,
+    "lift_starts_at_zero": true,
+    "lift_duration": true,
+    "lift_has_morph_animation": true,
+    "return_starts_at_zero": true,
+    "return_duration": true,
+    "return_has_morph_animation": true,
+    "clip_boundary_translation_continuous": true,
+    "clip_boundary_rotation_continuous": true,
+    "clip_boundary_weights_continuous": true,
+    "lift_has_full_turn_samples": true,
+    "shared_textures_2048": true,
+    "product_texture_not_embedded": true,
+    "Fabric_normal_and_orm": true,
+    "FabricInner_normal_and_orm": true
+  },
+  "all_structural_checks_pass": true,
+  "garment_gltf_vertices": 9495,
+  "garment_triangles": 17792,
+  "morph_targets": [
+    66
+  ],
+  "animations": {
+    "lift": {
+      "start_s": 0.0,
+      "end_s": 1.5,
+      "duration_s": 1.5
+    },
+    "return": {
+      "start_s": 0.0,
+      "end_s": 1.25,
+      "duration_s": 1.25
+    }
+  },
+  "embedded_images": [
+    {
+      "name": "tee_normal",
+      "size": [
+        2048,
+        2048
+      ],
+      "bytes": 1290649
+    },
+    {
+      "name": "tee_orm",
+      "size": [
+        2048,
+        2048
+      ],
+      "bytes": 2125879
+    },
+    {
+      "name": "WoodGrain",
+      "size": [
+        512,
+        512
+      ],
+      "bytes": 153884
+    }
+  ],
+  "uv_orientation": {
+    "front": {
+      "horizontal_uv_world_x_correlation": 0.991649466325218,
+      "vertical_uv_world_y_correlation": 0.9997783619945054,
+      "mean_gltf_z_m": 0.02457961067557335
+    },
+    "back": {
+      "horizontal_uv_world_x_correlation": -0.9946981856943964,
+      "vertical_uv_world_y_correlation": 0.999835202462888,
+      "mean_gltf_z_m": -0.009624101221561432
+    }
+  },
+  "bounds_gltf_m": {
+    "min": [
+      -0.31062331795692444,
+      -0.7794672250747681,
+      -0.061834923923015594
+    ],
+    "max": [
+      0.42696407437324524,
+      -0.07812413573265076,
+      0.18962880969047546
+    ]
+  },
+  "files": {
+    "tee.glb": {
+      "bytes": 4045200,
+      "sha256": "4568c432ba083db10bee74ab3c8b6338919efcc9289462e0ff4073779ca94cd2"
+    },
+    "tee_anim.glb": {
+      "bytes": 19052712,
+      "sha256": "450fcc0a7dbfcb4e729439e3bb46440790a9c3242dc8d2f57c99061e02bbc835"
+    }
+  },
+  "scope": "Structural GLB validation; collision, mirror correctness and visual quality require separate checks"
+}
