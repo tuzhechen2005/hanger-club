@@ -1,0 +1,38 @@
+{
+  "stage": "preflight",
+  "blender_version": "5.2.1 LTS",
+  "blender_build_hash": "9e2066aef7ef",
+  "checks": {
+    "blender_at_least_4_2": true,
+    "background_mode": true,
+    "cloth_modifier_available": true,
+    "gltf_export_available": true,
+    "gltf_import_available": true,
+    "front_photo_present": true,
+    "front_photo_decodes": true,
+    "back_photo_present": true,
+    "back_photo_decodes": true
+  },
+  "inputs": [
+    {
+      "path": "assets-src/photos/shirt3-front.webp",
+      "dimensions_px": [
+        1024,
+        1024
+      ],
+      "bytes": 88464
+    },
+    {
+      "path": "assets-src/photos/shirt3-back.webp",
+      "dimensions_px": [
+        1024,
+        1024
+      ],
+      "bytes": 89478
+    }
+  ],
+  "measurements_provided": false,
+  "elapsed_seconds": 0.096,
+  "asset_acceptance_status": "not_started",
+  "pending_spec_decision": "Allow hook metal above the contact-point origin; see docs/blender-preflight.md."
+}
