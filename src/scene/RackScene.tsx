@@ -6,9 +6,9 @@ import { products } from '../data/products'
 import { rig } from '../motion/rig'
 import { computeFraming, FOV } from './framing'
 import { createHangerGeometry, createTeeGeometry } from './geometry'
-import { createFabricMaterials, createGarmentTexture, patchCloth, type ClothUniforms } from './materials'
+import { clothDepthMaterial, clothUniforms, createFabricMaterials, createGarmentTexture, patchCloth, type ClothUniforms } from './materials'
 import { useGarmentModel, type GarmentModel } from './models'
-import { buildProxy, ClothSim, type ProxyPart } from './clothProxy'
+import { buildProxy, ClothSim, JERSEY_TEE, type ProxyPart } from './clothProxy'
 import type { Product } from '../data/products'
 
 interface GarmentRefs {
@@ -56,32 +56,47 @@ function fromModel(model: GarmentModel, product: Product, map: THREE.Texture): G
     inner: sources.find((m) => m.name === 'FabricInner'),
   })
   cloth.updateMatrix()
+  const materials: THREE.Material[] = [outer, inner]
+  // Each mesh (outer, inner shell) has its own node transform from quantisation, so its own
+  // uniforms, shared by its colour material and its shadow material.
   const uniforms = meshes.map((mesh) => {
     const isInner = (mesh.material as THREE.Material).name === 'FabricInner'
     mesh.material = isInner ? inner : outer
     mesh.updateMatrix()
     const toPivot = mesh === cloth ? cloth.matrix.clone() : cloth.matrix.clone().multiply(mesh.matrix)
-    return patchCloth(mesh.material as THREE.Material, toPivot)
+    const u = clothUniforms(toPivot)
+    patchCloth(mesh.material as THREE.Material, u)
+    mesh.customDepthMaterial = clothDepthMaterial(u)
+    materials.push(mesh.customDepthMaterial)
+    return u
   })
-  return { hook: model.hook.clone(), wood: model.wood.clone(), cloth, meshes, uniforms, materials: [outer, inner] }
+  return { hook: model.hook.clone(), wood: model.wood.clone(), cloth, meshes, uniforms, materials }
 }
 
 function fromPlaceholder(assets: PlaceholderAssets, product: Product, map: THREE.Texture): GarmentParts {
   const { outer } = createFabricMaterials(map, product)
   const cloth = new THREE.Mesh(assets.tee, outer)
+  const uniforms = clothUniforms()
+  patchCloth(outer, uniforms)
+  cloth.customDepthMaterial = clothDepthMaterial(uniforms)
   return {
     hook: new THREE.Mesh(assets.hanger.hook, assets.metal),
     wood: new THREE.Mesh(assets.hanger.wood, assets.wood),
     cloth,
     meshes: [cloth],
-    uniforms: [patchCloth(outer)],
-    materials: [outer],
+    uniforms: [uniforms],
+    materials: [outer, cloth.customDepthMaterial],
   }
 }
 
-/** The template parts the cloth proxy is built from (all garments share this geometry). */
-function proxyParts(model: GarmentModel | null, placeholder: PlaceholderAssets): ProxyPart[] {
-  if (!model) return [{ geometry: placeholder.tee, toPivot: new THREE.Matrix4() }]
+/**
+ * The template the cloth proxy is built from (all garments share this geometry): the fabric
+ * parts, outer surface first, and the hanger they rest on.
+ */
+function proxyParts(model: GarmentModel | null, placeholder: PlaceholderAssets): { parts: ProxyPart[]; support: ProxyPart } {
+  if (!model) {
+    return { parts: [{ geometry: placeholder.tee, toPivot: new THREE.Matrix4() }], support: { geometry: placeholder.hanger.wood, toPivot: new THREE.Matrix4() } }
+  }
   model.garment.updateMatrix()
   const parts: ProxyPart[] = []
   model.garment.traverse((o) => {
@@ -89,9 +104,12 @@ function proxyParts(model: GarmentModel | null, placeholder: PlaceholderAssets):
     if (!mesh.isMesh) return
     mesh.updateMatrix()
     const toPivot = mesh === model.garment ? mesh.matrix.clone() : model.garment.matrix.clone().multiply(mesh.matrix)
-    parts.push({ geometry: mesh.geometry, toPivot })
+    const part = { geometry: mesh.geometry, toPivot }
+    if ((mesh.material as THREE.Material).name === 'FabricInner') parts.push(part)
+    else parts.unshift(part)
   })
-  return parts
+  model.wood.updateMatrix()
+  return { parts, support: { geometry: model.wood.geometry, toPivot: model.wood.matrix.clone() } }
 }
 
 function Garment({ index, placeholder, model, sim }: { index: number; placeholder: PlaceholderAssets; model: GarmentModel | null; sim: ClothSim }) {
@@ -110,6 +128,7 @@ function Garment({ index, placeholder, model, sim }: { index: number; placeholde
   useEffect(() => {
     for (const u of parts.uniforms) {
       u.uDisp.value = sim.textures[index]
+      u.uGrad.value = sim.gradients[index]
       u.uDispWidth.value = sim.topology.textureWidth
       u.uDispOn.value = 1
     }
@@ -140,6 +159,7 @@ function Garment({ index, placeholder, model, sim }: { index: number; placeholde
 function Driver({ rail, wall, sim }: { rail: React.RefObject<THREE.Mesh | null>; wall: React.RefObject<THREE.Mesh | null>; sim: ClothSim }) {
   const bodies = useMemo(() => products.map(() => new THREE.Matrix4()), [])
   const follow = useMemo(() => products.map(() => false), [])
+  const inertia = useMemo(() => products.map(() => 1), [])
   const { camera, size, invalidate, raycaster, gl } = useThree()
 
   useEffect(() => {
@@ -201,9 +221,11 @@ function Driver({ rail, wall, sim }: { rail: React.RefObject<THREE.Mesh | null>;
       g.body.updateWorldMatrix(true, false)
       bodies[i].copy(g.body.matrixWorld)
       // Off-screen neighbours during the close-up don't need cloth, just their rest shape.
-      follow[i] = rig.reduced || rig.playing(i) || rig.offstage(i)
+      // Baked clips keep simulating: the bake is the shape, the proxy adds the inertia.
+      follow[i] = rig.reduced || rig.offstage(i)
+      inertia[i] = rig.inertia(i)
     })
-    const clothMoving = registry.length === products.length && sim.step(dt, bodies, follow)
+    const clothMoving = registry.length === products.length && sim.step(dt, bodies, follow, inertia)
     if (moving || clothMoving) invalidate()
   })
   return null
@@ -232,11 +254,15 @@ function SceneContent() {
     rig.invalidate()
   }, [model])
   // One proxy topology for the shared garment geometry, one simulation for all garments.
-  const sim = useMemo(() => new ClothSim(buildProxy(proxyParts(model, placeholder)), products.length), [model, placeholder])
+  const sim = useMemo(() => {
+    const { parts, support } = proxyParts(model, placeholder)
+    return new ClothSim(buildProxy(parts, support, JERSEY_TEE), products.length)
+  }, [model, placeholder])
+  const scene = useThree((state) => state.scene)
   useEffect(() => {
-    if (import.meta.env.DEV) Object.assign(window, { __sim: sim })
-    return () => sim.textures.forEach((t) => t.dispose())
-  }, [sim])
+    if (import.meta.env.DEV) Object.assign(window, { __sim: sim, __scene: scene })
+    return () => [...sim.textures, ...sim.gradients].forEach((t) => t.dispose())
+  }, [sim, scene])
   const rail = useRef<THREE.Mesh>(null)
   const wall = useRef<THREE.Mesh>(null)
   const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches

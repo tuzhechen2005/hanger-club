@@ -30,6 +30,14 @@ const SWITCH_OUT = 0.45
 const SWITCH_IN_START = 0.15
 const SWITCH_END = 0.8
 const PENDULUM_LENGTH = 0.42
+/**
+ * Hanger swing. A loaded hanger is heavily damped (cloth drag, hook friction): damping ≈ 0.85
+ * of critical, and the hook's acceleration is capped so a hard flick tilts it ~10–15°, not 30°+.
+ */
+const SWING_DAMPING = 8
+const SWING_MAX_ACCEL = 5
+/** Share of rail motion (sliding, turning side-on) the cloth feels as inertia. */
+const RAIL_INERTIA = 0.3
 
 export interface Pose {
   x: number
@@ -103,7 +111,7 @@ class Rig {
   private settledFrames = 0
   /** Baked cloth clip per garment; null = base mesh. */
   private clips: Array<{ name: ClipName; t: number } | null> = products.map(() => null)
-  /** Set by the scene once tee_anim.glb is in: baked clips replace procedural lag while they play. */
+  /** Set by the scene once tee_anim.glb is in: lift and return then play the baked cloth clips. */
   bakedClips = false
 
   /** Set by the scene: request a frame (render-on-demand). */
@@ -133,10 +141,19 @@ class Rig {
     return i !== this.active && !(this.switching && i === this.switching.from)
   }
 
-  /** True while garment i plays a baked clip (its cloth proxy should follow the rest shape). */
+  /** True while garment i plays a baked clip (the bake contains the swing, so no pendulum). */
   playing(i: number) {
     const clip = this.clips[i]
     return this.bakedClips && !!clip && clip.name !== 'hold'
+  }
+
+  /**
+   * How much of garment i's motion its cloth should feel as inertia. Lifting, spinning and
+   * switching are physical moves of the hanger; on the rail, garments also turn side-on as
+   * pure layout, so they get only part of it.
+   */
+  inertia(i: number) {
+    return i === this.active && this.mode !== 'browse' ? 1 : RAIL_INERTIA
   }
 
   get current() {
@@ -412,8 +429,8 @@ class Rig {
     } else {
       const vx = (x - track.px) / dt
       const vz = (z - track.pz) / dt
-      ax = clamp((vx - track.vx) / dt, -30, 30)
-      az = clamp((vz - track.vz) / dt, -30, 30)
+      ax = clamp((vx - track.vx) / dt, -SWING_MAX_ACCEL, SWING_MAX_ACCEL)
+      az = clamp((vz - track.vz) / dt, -SWING_MAX_ACCEL, SWING_MAX_ACCEL)
       track.vx = vx
       track.vz = vz
     }
@@ -424,9 +441,8 @@ class Rig {
       track.lateral.angle = track.lateral.velocity = 0
       track.depth.angle = track.depth.velocity = 0
     } else {
-      // A hanger with a garment on it stops within a couple of swings (cloth drag, hook friction).
-      stepPendulum(track.lateral, ax, PENDULUM_LENGTH, 5, dt)
-      stepPendulum(track.depth, az, PENDULUM_LENGTH, 5.5, dt)
+      stepPendulum(track.lateral, ax, PENDULUM_LENGTH, SWING_DAMPING, dt)
+      stepPendulum(track.depth, az, PENDULUM_LENGTH, SWING_DAMPING, dt)
     }
 
     pose.x = x

@@ -85,4 +85,4 @@ python -m http.server 8765 --bind 127.0.0.1
 
 打开 `http://127.0.0.1:8765/tools/blender/preview.html` 查看实际 GLB，拖动旋转、播放或拖动动画。
 `?trial=NAME` 查看本地实验。检查页从 jsDelivr 加载与项目相同版本 Three.js，模型和商品贴图在本机加载。
-当前仓库没有 `src/` 页面实现，本轮提供资产和检查工具，尚未集成商店界面。
+网页集成见仓库根目录 `README.md`；网页上的实时布料动态与 Blender 形状的分工见 `docs/cloth-motion.md`。

@@ -5,6 +5,8 @@ import { UV_LAYOUT } from './uvLayout'
 export interface ClothUniforms {
   /** Per-particle offsets from the cloth proxy (body space, metres). */
   uDisp: { value: THREE.Texture | null }
+  /** Per-particle deformation gradients (three texels per particle). */
+  uGrad: { value: THREE.Texture | null }
   uDispWidth: { value: number }
   uDispOn: { value: number }
   /** Mesh node → hanger (body) space, and back. Quantised GLB meshes are not in metres. */
@@ -12,18 +14,26 @@ export interface ClothUniforms {
   uFromPivot: { value: THREE.Matrix4 }
 }
 
-/**
- * Moves each vertex by the offsets of the proxy particles it is bound to (attributes
- * aProxyIdx / aProxyW, see clothProxy.ts). Offsets are added after the baked morphs.
- */
-export function patchCloth(material: THREE.Material, toPivot = new THREE.Matrix4()) {
-  const uniforms: ClothUniforms = {
+/** Uniforms for one garment's cloth; share them between its colour and shadow materials. */
+export function clothUniforms(toPivot = new THREE.Matrix4()): ClothUniforms {
+  return {
     uDisp: { value: null },
+    uGrad: { value: null },
     uDispWidth: { value: 32 },
     uDispOn: { value: 0 },
     uToPivot: { value: toPivot.clone() },
     uFromPivot: { value: toPivot.clone().invert() },
   }
+}
+
+/**
+ * Moves each vertex by the offsets of the proxy particles it is bound to (attributes
+ * aProxyIdx / aProxyW, see clothProxy.ts), after the baked morphs. Lit materials also turn
+ * the normal with the particles' interpolated deformation gradients, so shading follows the
+ * sway; depth materials get the offsets so shadows do too.
+ */
+export function patchCloth(material: THREE.Material, uniforms: ClothUniforms) {
+  const lit = !(material as THREE.MeshDepthMaterial).isMeshDepthMaterial
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms)
     shader.vertexShader = shader.vertexShader
@@ -53,8 +63,38 @@ if (uDispOn > 0.5) {
   transformed = (uFromPivot * vec4(pivot, 1.0)).xyz;
 }`,
       )
+    if (lit) {
+      // Deformation gradient F = I + Σ w_k J_k; normals transform by cof(F) = det(F) F⁻ᵀ.
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          'vec3 proxyOffset(float index) {',
+          `uniform sampler2D uGrad;
+vec3 proxyGradient(float index, int column) {
+  int k = int(index + 0.5) * 3 + column;
+  int w = int(uDispWidth) * 3;
+  return texelFetch(uGrad, ivec2(k % w, k / w), 0).xyz;
+}
+vec3 proxyColumn(int column) {
+  return aProxyW.x * proxyGradient(aProxyIdx.x, column) + aProxyW.y * proxyGradient(aProxyIdx.y, column)
+       + aProxyW.z * proxyGradient(aProxyIdx.z, column) + aProxyW.w * proxyGradient(aProxyIdx.w, column);
+}
+vec3 proxyOffset(float index) {`,
+        )
+        .replace(
+          '#include <morphnormal_vertex>',
+          `#include <morphnormal_vertex>
+if (uDispOn > 0.5) {
+  vec3 f0 = vec3(1.0, 0.0, 0.0) + proxyColumn(0);
+  vec3 f1 = vec3(0.0, 1.0, 0.0) + proxyColumn(1);
+  vec3 f2 = vec3(0.0, 0.0, 1.0) + proxyColumn(2);
+  vec3 n = transpose(mat3(uFromPivot)) * objectNormal;
+  n = n.x * cross(f1, f2) + n.y * cross(f2, f0) + n.z * cross(f0, f1);
+  objectNormal = normalize(transpose(mat3(uToPivot)) * n);
+}`,
+        )
+    }
     // A single-sheet placeholder shows its inside through the neck: darken back faces.
-    if (material.side === THREE.DoubleSide) {
+    if (lit && material.side === THREE.DoubleSide) {
       shader.fragmentShader = shader.fragmentShader.replace(
         '#include <map_fragment>',
         `#include <map_fragment>
@@ -62,8 +102,14 @@ if (!gl_FrontFacing) diffuseColor.rgb *= 0.5;`,
       )
     }
   }
-  material.customProgramCacheKey = () => `cloth-v3-${material.side}`
-  return uniforms
+  material.customProgramCacheKey = () => `cloth-v5-${lit ? 'lit' : 'depth'}-${material.side}`
+}
+
+/** Shadow-casting material that follows the same cloth offsets as the visible one. */
+export function clothDepthMaterial(uniforms: ClothUniforms) {
+  const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
+  patchCloth(depth, uniforms)
+  return depth
 }
 
 function fabricMaterial(map: THREE.Texture, fabric: string, inner: boolean, source?: THREE.MeshStandardMaterial) {
