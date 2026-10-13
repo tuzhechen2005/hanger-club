@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "models": "sh tools/web/optimize-models.sh",
-    "cloth:check": "node tools/web/cloth-check.mjs"
+    "cloth:check": "node tools/web/cloth-check.mjs",
+    "check:ui": "node tools/web/interaction-check.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.8.1",

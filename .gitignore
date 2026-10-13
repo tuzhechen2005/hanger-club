@@ -9,3 +9,4 @@ assets-src/experiments/
 assets-src/reference-local/
 # Third-party reference recording; keep local only
 example_video.mp4
+.venv/

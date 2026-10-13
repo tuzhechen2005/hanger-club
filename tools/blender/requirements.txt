@@ -1,0 +1,5 @@
+# Python side of the asset pipeline (tools/blender/*.py run outside Blender, tools/web/*.py).
+# Python 3.10+; e.g. python3.12 -m venv .venv && .venv/bin/pip install -r tools/blender/requirements.txt
+pillow
+numpy
+opencv-python-headless

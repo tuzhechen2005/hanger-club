@@ -9,7 +9,7 @@
 - 购物袋叫"Claim"，打开是一张热敏纸收据。
 - 取下衣服转圈、转回正面时，3D 衣服会像拍立得显影一样变成商品原图，再展开成一张拍立得；点"Turn it in 3D"或按 Esc，照片沿原路溶解回 3D。规格牌后面还别着一张原图小照片，只露出一角，随时点开。
 
-目标体验参考 Motionary 的 clothing-rack 手机演示。最初的 SVG 原型保留在 `legacy-svg/`，交接背景见 `开发交接文档.md`。
+目标体验参考 Motionary 的 clothing-rack 手机演示。最初的 SVG 原型保留在 `legacy-svg/`。**接手先读 `HANDOFF.md`**（现状、分支、命令、待决事项）；早期背景见 `开发交接文档.md`。
 
 ## 运行
 
@@ -22,6 +22,7 @@ npm test           # 单元测试（购物袋、弹簧、手势、路径）
 npm run build      # 类型检查 + 构建到 dist/（会去掉网页用不到的原始 GLB 和 PNG 贴图）
 npm run models     # Blender 导出更新后，重新生成网页用的压缩模型 public/models/web/
 npm run cloth:check  # 开着 dev 服务器时，测量布料动态是否达标（需要本机 Chrome）
+npm run check:ui     # 开着 dev 服务器时，跑 24 项交互检查
 ```
 
 Blender 资产管线见 `tools/blender/README.md`，资产规格见 `docs/asset-spec.md`。
