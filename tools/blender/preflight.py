@@ -45,7 +45,7 @@ def main():
         "measurements_provided": (photos / f"{args.slug}-measurements.json").exists(),
         "elapsed_seconds": round(time.perf_counter() - started, 3),
         "asset_acceptance_status": "not_started",
-        "pending_spec_decision": "Allow hook metal above the contact-point origin; see docs/blender-preflight.md.",
+        "spec_decision": "Approved 2026-10-12: hook metal may rise 0.004 m above the contact-point origin.",
     }
     destination = root / "assets-src" / "reports" / "preflight" / "report.json"
     destination.parent.mkdir(parents=True, exist_ok=True)

@@ -1,0 +1,48 @@
+{
+  "blender_version": "5.2.1 LTS",
+  "meshes": {
+    "HangerHook": {
+      "vertices": 852,
+      "triangles": 1700,
+      "bounds_blender_m": {
+        "min": [
+          -0.0020000000949949026,
+          -0.014999995008111,
+          -0.0820000022649765
+        ],
+        "max": [
+          0.0020000000949949026,
+          0.015000000596046448,
+          0.004000000189989805
+        ]
+      }
+    },
+    "HangerWood": {
+      "vertices": 492,
+      "triangles": 980,
+      "bounds_blender_m": {
+        "min": [
+          -0.2199999988079071,
+          -0.010999999940395355,
+          -0.13872507214546204
+        ],
+        "max": [
+          0.2199999988079071,
+          0.010999999940395355,
+          -0.07500000298023224
+        ]
+      }
+    }
+  },
+  "elapsed_seconds": 4.096,
+  "source": "Original scripted wood and hook; original generated wood texture; studio area lights, no HDRI",
+  "origin": "Inner crown contact (0,0,0), hook metal top approximately +0.004 m",
+  "checks": {
+    "triangle_budget": true,
+    "separate_hook": true,
+    "width_m": 0.44
+  },
+  "known_issues": [
+    "Low-poly end caps are rounded by elliptical section; not a manufacturing CAD model"
+  ]
+}
