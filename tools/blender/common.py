@@ -77,6 +77,7 @@ def export_glb(path, objects, animated=False):
         export_normals=True, export_tangents=False, export_materials="EXPORT",
         export_animations=animated, export_animation_mode="NLA_TRACKS",
         export_force_sampling=True, export_frame_range=False,
+        export_anim_slide_to_zero=True,
         export_morph=animated, export_morph_normal=animated,
         export_morph_tangent=False, export_extras=True,
     )
@@ -93,6 +94,11 @@ def stats(obj):
 
 def studio(target=(0, 0, -.43), width=1.25, resolution=768):
     scene = bpy.context.scene
+    # Authoring files can already contain this rig. Replacing it keeps source
+    # and clean GLB re-import renders under the same illumination.
+    for obj in list(scene.objects):
+        if obj.type in {"LIGHT", "CAMERA"}:
+            bpy.data.objects.remove(obj, do_unlink=True)
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 32
     scene.cycles.use_denoising = True
@@ -110,6 +116,7 @@ def studio(target=(0, 0, -.43), width=1.25, resolution=768):
     scene.render.resolution_y = resolution
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
+    scene.render.film_transparent = True
     scene.view_settings.view_transform = "AgX"
     world = bpy.data.worlds.new("StudioWorld")
     world.use_nodes = True
@@ -139,6 +146,6 @@ def studio(target=(0, 0, -.43), width=1.25, resolution=768):
 def render(path, camera, azimuth=0, target=(0, 0, -.43), elevation=.08):
     camera.location = (math.sin(azimuth) * 2, -math.cos(azimuth) * 2, target[2] + elevation)
     camera.rotation_euler = (Vector(target) - camera.location).to_track_quat("-Z", "Y").to_euler()
-    bpy.context.scene.render.filepath = str(path)
+    bpy.context.scene.render.filepath = str(path.resolve())
     path.parent.mkdir(parents=True, exist_ok=True)
     bpy.ops.render.render(write_still=True)

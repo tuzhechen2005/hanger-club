@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "units": "m",
+  "uv_origin": "bottom_left",
+  "texture_size": [
+    2048,
+    2048
+  ],
+  "uv_per_meter": 0.7741935483870968,
+  "dimensions": {
+    "length_m": 0.7,
+    "chest_flat_m": 0.62,
+    "shoulder_m": 0.6,
+    "sleeve_m": 0.24,
+    "sleeve_opening_m": 0.24,
+    "hem_flat_m": 0.61,
+    "rib_width_m": 0.025
+  },
+  "dimensions_source": "default",
+  "islands": [
+    {
+      "name": "front",
+      "allowed_rect": [
+        0.0,
+        0.4,
+        0.48,
+        1.0
+      ],
+      "rect": [
+        0.0,
+        0.4,
+        0.48,
+        0.9419354838709677
+      ],
+      "physical_size_m": [
+        0.62,
+        0.7
+      ],
+      "hps_uv": [
+        0.32129032258064516,
+        0.9419354838709677
+      ],
+      "centerline_u": 0.24,
+      "upright": true,
+      "mirrored": false
+    },
+    {
+      "name": "back",
+      "allowed_rect": [
+        0.52,
+        0.4,
+        1.0,
+        1.0
+      ],
+      "rect": [
+        0.52,
+        0.4,
+        1.0,
+        0.9419354838709677
+      ],
+      "physical_size_m": [
+        0.62,
+        0.7
+      ],
+      "hps_uv": [
+        0.8412903225806452,
+        0.9419354838709677
+      ],
+      "centerline_u": 0.76,
+      "upright": true,
+      "mirrored": false
+    },
+    {
+      "name": "sleeve_left",
+      "rect": [
+        0.02,
+        0.025,
+        0.39835717056394926,
+        0.2108064516129032
+      ],
+      "physical_size_m": [
+        0.4887113453117678,
+        0.24
+      ]
+    },
+    {
+      "name": "sleeve_right",
+      "rect": [
+        0.53,
+        0.025,
+        0.9083571705639493,
+        0.2108064516129032
+      ],
+      "physical_size_m": [
+        0.4887113453117678,
+        0.24
+      ]
+    },
+    {
+      "name": "collar_rib",
+      "rect": [
+        0.02,
+        0.29,
+        0.451686607796952,
+        0.3093548387096774
+      ],
+      "physical_size_m": [
+        0.5575952017377297,
+        0.025
+      ]
+    }
+  ],
+  "notes": "Allowed UV regions contain isotropic physical-size rectangles; unused margins are intentional."
+}
