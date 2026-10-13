@@ -1,34 +1,29 @@
 import * as THREE from 'three'
 import type { PrintPlacement, Product } from '../data/products'
-import { UV_LAYOUT } from './geometry'
+import { UV_LAYOUT } from './uvLayout'
 
 export interface ClothUniforms {
   uBend: { value: THREE.Vector2 }
   uFlare: { value: number }
   uTwist: { value: number }
   uLength: { value: number }
+  /** Mesh node → hanger (HookPivot) space, and back. Quantised GLB meshes are not in metres. */
+  uToPivot: { value: THREE.Matrix4 }
+  uFromPivot: { value: THREE.Matrix4 }
 }
 
 /**
- * Fabric material with cheap secondary motion in the vertex shader: the hem lags behind
- * swings and spins, weighted by depth below the hook. Not cloth simulation.
- * Back faces (the inside of the garment) are darkened.
+ * Cheap secondary motion in the vertex shader: the hem lags behind swings and spins, weighted
+ * by depth below the hook. Not cloth simulation; baked clips replace it while they play.
  */
-export function createClothMaterial(texture: THREE.Texture, fabric: string) {
-  const sheen = new THREE.Color(fabric).lerp(new THREE.Color('#ffffff'), 0.35)
-  const material = new THREE.MeshPhysicalMaterial({
-    map: texture,
-    roughness: 0.9,
-    sheen: 0.5,
-    sheenRoughness: 0.75,
-    sheenColor: sheen,
-    side: THREE.DoubleSide,
-  })
+export function patchCloth(material: THREE.Material, toPivot = new THREE.Matrix4()) {
   const uniforms: ClothUniforms = {
     uBend: { value: new THREE.Vector2() },
     uFlare: { value: 0 },
     uTwist: { value: 0 },
     uLength: { value: 0.82 },
+    uToPivot: { value: toPivot.clone() },
+    uFromPivot: { value: toPivot.clone().invert() },
   }
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, uniforms)
@@ -39,26 +34,60 @@ export function createClothMaterial(texture: THREE.Texture, fabric: string) {
 uniform vec2 uBend;
 uniform float uFlare;
 uniform float uTwist;
-uniform float uLength;`,
+uniform float uLength;
+uniform mat4 uToPivot;
+uniform mat4 uFromPivot;`,
       )
       .replace(
-        '#include <begin_vertex>',
-        `#include <begin_vertex>
-float hang = clamp((-transformed.y - 0.08) / uLength, 0.0, 1.0);
+        '#include <morphtarget_vertex>',
+        `#include <morphtarget_vertex>
+vec3 pivot = (uToPivot * vec4(transformed, 1.0)).xyz;
+float hang = clamp((-pivot.y - 0.08) / uLength, 0.0, 1.0);
 float w = hang * hang;
 float tw = uTwist * w;
-transformed.xz = mat2(cos(tw), -sin(tw), sin(tw), cos(tw)) * transformed.xz;
-transformed.xz += transformed.xz * uFlare * w;
-transformed.xz += uBend * w;`,
+pivot.xz = mat2(cos(tw), -sin(tw), sin(tw), cos(tw)) * pivot.xz;
+pivot.xz += pivot.xz * uFlare * w;
+pivot.xz += uBend * w;
+transformed = (uFromPivot * vec4(pivot, 1.0)).xyz;`,
       )
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <map_fragment>',
-      `#include <map_fragment>
+    // A single-sheet placeholder shows its inside through the neck: darken back faces.
+    if (material.side === THREE.DoubleSide) {
+      shader.fragmentShader = shader.fragmentShader.replace(
+        '#include <map_fragment>',
+        `#include <map_fragment>
 if (!gl_FrontFacing) diffuseColor.rgb *= 0.5;`,
-    )
+      )
+    }
   }
-  material.customProgramCacheKey = () => 'cloth-v1'
-  return { material, uniforms }
+  material.customProgramCacheKey = () => `cloth-v2-${material.side}`
+  return uniforms
+}
+
+function fabricMaterial(map: THREE.Texture, fabric: string, inner: boolean, source?: THREE.MeshStandardMaterial) {
+  const sheen = new THREE.Color(fabric).lerp(new THREE.Color('#ffffff'), 0.35)
+  return new THREE.MeshPhysicalMaterial({
+    map,
+    color: inner ? new THREE.Color(0.55, 0.55, 0.55) : new THREE.Color(1, 1, 1),
+    normalMap: source?.normalMap ?? null,
+    normalScale: source?.normalScale ?? new THREE.Vector2(1, 1),
+    aoMap: source?.aoMap ?? null,
+    roughnessMap: source?.roughnessMap ?? null,
+    roughness: source?.roughnessMap ? 1 : 0.9,
+    metalness: 0,
+    sheen: 0.45,
+    sheenRoughness: 0.8,
+    sheenColor: sheen,
+    // The placeholder is a single sheet; the Blender garment is a closed 2 mm shell.
+    side: source ? THREE.FrontSide : THREE.DoubleSide,
+  })
+}
+
+/** Outer + inner fabric for one product, sharing the GLB's normal/ORM maps when given. */
+export function createFabricMaterials(map: THREE.Texture, product: Product, source?: { outer?: THREE.MeshStandardMaterial; inner?: THREE.MeshStandardMaterial }) {
+  return {
+    outer: fabricMaterial(map, product.fabric, false, source?.outer),
+    inner: fabricMaterial(map, product.fabric, true, source?.inner ?? source?.outer),
+  }
 }
 
 const SIZE = 1024
@@ -80,22 +109,22 @@ function knit() {
   return c
 }
 
-function drawPrint(g: CanvasRenderingContext2D, image: HTMLImageElement, place: PrintPlacement, rect: typeof UV_LAYOUT.front) {
+type Rect = typeof UV_LAYOUT.front
+
+/** Place a photo-cropped print at physical scale inside a body rect (image space, y down). */
+function drawPrint(g: CanvasRenderingContext2D, image: HTMLImageElement, place: PrintPlacement, rect: Rect) {
   const x0 = rect.u0 * SIZE
   const w = (rect.u1 - rect.u0) * SIZE
   const h = (rect.v1 - rect.v0) * SIZE
   const top = (1 - rect.v1) * SIZE
   const pw = place.width * w
-  // Rect height covers the garment length; widths are body widths. Keep the print's own aspect
-  // in physical units (body width ≈ 0.61 m, length ≈ 0.70 m).
-  const ph = ((pw / w) * 0.61 * place.aspect * h) / 0.7
+  const ph = ((place.width * UV_LAYOUT.bodyWidth * place.aspect) / UV_LAYOUT.bodyLength) * h
   const cx = x0 + w / 2 + place.centerX * w
-  const py = top + Math.max(0, place.top - UV_LAYOUT.neckDrop) * h
   g.save()
   g.beginPath()
   g.rect(x0, top, w, h)
   g.clip()
-  g.drawImage(image, cx - pw / 2, py, pw, ph)
+  g.drawImage(image, cx - pw / 2, top + place.top * h, pw, ph)
   g.restore()
 }
 
@@ -108,8 +137,19 @@ const loadImage = (url: string) =>
     img.src = url
   })
 
-/** Placeholder base color texture: fabric color + knit grain + prints from the photos. */
-export function createGarmentTexture(product: Product, onUpdate: () => void) {
+/**
+ * Base color for a product, in glTF UV convention (flipY = false). Uses the pipeline's
+ * finished basecolor.png when there is one; otherwise composes fabric color + knit grain +
+ * the photo-cropped placeholder prints.
+ */
+export function createGarmentTexture(product: Product, onUpdate: () => void): THREE.Texture {
+  if (product.basecolor) {
+    const texture = new THREE.TextureLoader().load(product.basecolor, onUpdate)
+    texture.flipY = false
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.anisotropy = 4
+    return texture
+  }
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = SIZE
   const g = canvas.getContext('2d')!
@@ -123,14 +163,14 @@ export function createGarmentTexture(product: Product, onUpdate: () => void) {
   g.globalCompositeOperation = 'source-over'
 
   const texture = new THREE.CanvasTexture(canvas)
+  texture.flipY = false
   texture.colorSpace = THREE.SRGBColorSpace
   texture.anisotropy = 4
 
-  const sides = [
+  for (const [side, rect] of [
     ['front', UV_LAYOUT.front],
     ['back', UV_LAYOUT.back],
-  ] as const
-  for (const [side, rect] of sides) {
+  ] as const) {
     const place = product.prints[side]
     if (!place) continue
     loadImage(place.url)

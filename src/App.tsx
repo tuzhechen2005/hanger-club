@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { products, SIZES } from './data/products'
 import { rig } from './motion/rig'
 import { useUI } from './state/store'
@@ -36,6 +36,21 @@ const flatControls: Controls = {
   select: (i) => useUI.setState({ index: i }),
   lift: () => useUI.setState({ mode: 'inspect', size: 'M' }),
   close: () => useUI.setState({ mode: 'browse' }),
+}
+
+/** If the 3D scene throws, fall back to the flat view instead of blanking the page. */
+class SceneBoundary extends Component<{ onError: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  componentDidCatch(error: unknown) {
+    console.error('[HangerClub] 3D scene failed, showing flat view', error)
+    this.props.onError()
+  }
+  render() {
+    return this.state.failed ? null : this.props.children
+  }
 }
 
 function Stage() {
@@ -83,7 +98,8 @@ function FlatStage() {
 }
 
 export default function App() {
-  const webgl = useMemo(hasWebGL, [])
+  const [sceneFailed, setSceneFailed] = useState(false)
+  const webgl = useMemo(hasWebGL, []) && !sceneFailed
   const controls = webgl ? rigControls : flatControls
   const index = useUI((s) => s.index)
   const mode = useUI((s) => s.mode)
@@ -143,7 +159,13 @@ export default function App() {
 
   return (
     <div className="app" data-mode={mode}>
-      {webgl ? <Stage /> : <FlatStage />}
+      {webgl ? (
+        <SceneBoundary onError={() => setSceneFailed(true)}>
+          <Stage />
+        </SceneBoundary>
+      ) : (
+        <FlatStage />
+      )}
 
       <header className="topbar">
         <button className="top-left" onClick={() => openSheet('index')} inert={!browsing} aria-hidden={!browsing}>
@@ -213,7 +235,7 @@ export default function App() {
           >
             ADD TO BAG — ${product.price}
           </button>
-          <p className="hint">Drag to turn · pull down to put it back · placeholder 3D model</p>
+          <p className="hint">Drag to turn · pull down to put it back</p>
         </div>
       </section>
 

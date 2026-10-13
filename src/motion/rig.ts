@@ -4,14 +4,27 @@
 import { products } from '../data/products'
 import { useUI, type Mode } from '../state/store'
 import { classifyAxis, releaseTarget, rubberBand, VelocityTracker, type Axis } from './gesture'
-import { ease, LIFT, LIFT_ARRIVE, RETURN, RETURN_ARRIVE, samplePath, travel, type PathKey } from './path'
+import {
+  clipDuration,
+  clipMorph,
+  ease,
+  LIFT,
+  LIFT_ARRIVE,
+  RETURN,
+  RETURN_ARRIVE,
+  samplePath,
+  travel,
+  type ClipName,
+  type MorphBlend,
+  type PathKey,
+} from './path'
 import { atRest, makeSpring, MAX_FRAME, settle, stepPendulum, stepSpring, tune, type Pendulum } from './spring'
 
 const DEG = Math.PI / 180
 const COUNT = products.length
 
 /** Rail layout: the centre piece faces front, neighbours turn side-on and pack together. */
-export const LAYOUT = { near: 0.56, far: 0.09, sideYaw: 82 * DEG, recess: 0.035 }
+export const LAYOUT = { near: 0.58, far: 0.11, sideYaw: 82 * DEG, recess: 0.035 }
 const INSPECT: [number, number, number] = [0, 0.05, 0.6]
 const SWITCH_OUT = 0.45
 const SWITCH_IN_START = 0.15
@@ -96,11 +109,36 @@ class Rig {
   private returnSpin = 0
   private switching: { from: number; to: number; dir: number; fromSpin: number } | null = null
   private settledFrames = 0
+  /** Baked cloth clip per garment; null = base mesh. */
+  private clips: Array<{ name: ClipName; t: number } | null> = products.map(() => null)
+  /** Set by the scene once tee_anim.glb is in: baked clips replace procedural lag while they play. */
+  bakedClips = false
 
   /** Set by the scene: request a frame (render-on-demand). */
   invalidate: () => void = () => {}
   /** Set by the scene: which garment is under a client point. */
   pick: (x: number, y: number) => number | null = () => null
+
+  /** Morph blend for garment i, or null when it should show the base mesh. */
+  morph(i: number): MorphBlend | null {
+    const clip = this.clips[i]
+    return clip ? clipMorph(clip.name, clip.t) : null
+  }
+
+  private startClip(i: number, name: ClipName) {
+    this.clips[i] = { name, t: 0 }
+    if (name !== 'hold' && this.bakedClips) {
+      // The bake already contains the swing; start from rest so the two don't add up.
+      const track = this.tracks[i]
+      track.lateral.angle = track.lateral.velocity = 0
+      track.depth.angle = track.depth.velocity = 0
+    }
+  }
+
+  private playing(i: number) {
+    const clip = this.clips[i]
+    return this.bakedClips && !!clip && clip.name !== 'hold'
+  }
 
   get current() {
     return clamp(Math.round(this.pos.target), 0, COUNT - 1)
@@ -150,6 +188,7 @@ class Rig {
     settle(this.yaw)
     this.yaw.x = this.yaw.target = 0
     useUI.setState({ index: this.active, size: 'M' })
+    this.startClip(this.active, 'lift')
     this.setMode('lifting')
   }
 
@@ -158,6 +197,7 @@ class Rig {
     // Unwind to the nearest whole turn so the garment goes back facing front.
     const turn = 2 * Math.PI
     this.returnSpin = this.yaw.x - Math.round(this.yaw.x / turn) * turn
+    this.startClip(this.active, 'return')
     this.setMode('returning')
   }
 
@@ -166,6 +206,9 @@ class Rig {
     const to = this.active + Math.sign(delta)
     if (to < 0 || to >= COUNT) return
     this.switching = { from: this.active, to, dir: Math.sign(delta), fromSpin: this.yaw.x }
+    // Both keep the hung close-up shape (end of lift) while they fly.
+    this.startClip(this.active, 'hold')
+    this.startClip(to, 'hold')
     this.active = to
     this.pos.x = this.pos.target = to
     this.pos.v = 0
@@ -285,6 +328,7 @@ class Rig {
       case 'switching':
         this.blend = 1
         if (this.t >= SWITCH_END) {
+          if (this.switching) this.clips[this.switching.from] = null
           this.switching = null
           this.setMode('inspect')
         }
@@ -297,7 +341,15 @@ class Rig {
     }
     this.syncIndex()
 
-    let moving = this.mode !== 'browse' && this.mode !== 'inspect'
+    let clipsPlaying = false
+    this.clips.forEach((clip, i) => {
+      if (!clip || clip.name === 'hold') return
+      clip.t += dt
+      if (clip.t >= clipDuration(clip.name)) this.clips[i] = clip.name === 'lift' ? { name: 'hold', t: 0 } : null
+      clipsPlaying = true
+    })
+
+    let moving = clipsPlaying || (this.mode !== 'browse' && this.mode !== 'inspect')
     moving ||= !!this.drag || !atRest(this.pos) || !atRest(this.yaw)
     for (let i = 0; i < COUNT; i++) moving = this.updatePose(i, dt) || moving
     // Keep rendering a few frames after everything rests so the last pose is drawn.
@@ -373,7 +425,7 @@ class Rig {
     track.pz = z
     track.pspin = spin + rackYaw
 
-    if (this.reduced) {
+    if (this.reduced || this.playing(i)) {
       track.lateral.angle = track.lateral.velocity = 0
       track.depth.angle = track.depth.velocity = 0
       track.spinVel = 0
@@ -397,8 +449,9 @@ class Rig {
     pose.swingX = -track.depth.angle
     pose.bendX = wx * c - wz * s
     pose.bendZ = wx * s + wz * c
-    pose.flare = this.reduced ? 0 : Math.min(0.2, track.spinVel ** 2 * 0.0018)
-    pose.twist = this.reduced ? 0 : clamp(-track.spinVel * 0.035, -0.3, 0.3)
+    const procedural = !this.reduced && !this.playing(i)
+    pose.flare = procedural ? Math.min(0.2, track.spinVel ** 2 * 0.0018) : 0
+    pose.twist = procedural ? clamp(-track.spinVel * 0.035, -0.3, 0.3) : 0
 
     const p = track.lateral
     const q = track.depth

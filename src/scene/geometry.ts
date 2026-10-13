@@ -4,6 +4,7 @@
 // with simple folds — not a cloth simulation.
 
 import * as THREE from 'three'
+import { UV_LAYOUT } from './uvLayout'
 
 // Boxy M (spec §3.1).
 const LENGTH = 0.7
@@ -102,9 +103,12 @@ export function createTeeGeometry() {
     const z = depth(s, t, x) + folds(x, t, front)
     return [x, y, front ? z : -z]
   }
-  // Front: u 0–0.48, v 1–0.4. Back: u reversed so prints read correctly from behind.
-  const front = b.grid(COLS, ROWS, bodyPoint(true), (s, t) => [0.48 * s, 1 - 0.6 * t], false)
-  const back = b.grid(COLS, ROWS, bodyPoint(false), (s, t) => [0.52 + 0.48 * (1 - s), 1 - 0.6 * t], true)
+  // Same islands as the Blender export (glTF UVs: v = 0 at the image top). The back runs
+  // right-to-left so prints read correctly from behind.
+  const { front: F, back: K } = UV_LAYOUT
+  const bodyUv = (r: typeof F, s: number, t: number): [number, number] => [r.u0 + (r.u1 - r.u0) * s, 1 - (r.v1 - (r.v1 - r.v0) * t)]
+  const front = b.grid(COLS, ROWS, bodyPoint(true), (s, t) => bodyUv(F, s, t), false)
+  const back = b.grid(COLS, ROWS, bodyPoint(false), (s, t) => bodyUv(K, 1 - s, t), true)
 
   // Close the shoulders between front and back, leaving the neck open.
   for (let i = 0; i < COLS; i++) {
@@ -134,8 +138,8 @@ export function createTeeGeometry() {
     const u0 = side > 0 ? 0 : 0.5
     // Mirror winding for the left sleeve so normals still face outward.
     const outward = side > 0
-    b.grid(12, 10, sleeve(1), (s, t) => [u0 + 0.24 * t, 0.04 + 0.3 * s], outward)
-    b.grid(12, 10, sleeve(-1), (s, t) => [u0 + 0.25 + 0.24 * t, 0.04 + 0.3 * s], !outward)
+    b.grid(12, 10, sleeve(1), (s, t) => [u0 + 0.24 * t, 1 - (0.04 + 0.15 * s)], outward)
+    b.grid(12, 10, sleeve(-1), (s, t) => [u0 + 0.25 + 0.24 * t, 1 - (0.04 + 0.15 * s)], !outward)
   }
 
   const g = b.build()
@@ -192,12 +196,4 @@ function mergeGeometries(parts: THREE.BufferGeometry[]) {
   merged.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3))
   merged.setIndex(indices)
   return merged
-}
-
-/** Front-body rectangle in texture space and the garment dimensions it maps to. */
-export const UV_LAYOUT = {
-  front: { u0: 0, u1: 0.48, v0: 0.4, v1: 1 },
-  back: { u0: 0.52, u1: 1, v0: 0.4, v1: 1 },
-  /** Front neckline drop relative to the collar top, as a fraction of length. */
-  neckDrop: NECK_DROP_FRONT / LENGTH,
 }

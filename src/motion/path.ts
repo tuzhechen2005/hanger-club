@@ -1,7 +1,8 @@
 // Hook-pivot paths for lifting a garment off the rail and putting it back.
-// These must match docs/asset-spec.md §4.2: the Blender clips are baked along the same paths.
+// These must match docs/asset-spec.md §4.2 and pose() in tools/blender/bake_clips.py: the cloth
+// morphs are baked along exactly these paths, including smoothstep easing on every segment.
 
-export type Ease = 'linear' | 'in' | 'out' | 'inOut'
+export type Ease = 'linear' | 'in' | 'out' | 'inOut' | 'smooth'
 
 export interface PathKey {
   t: number
@@ -14,15 +15,15 @@ export interface PathKey {
 
 export const LIFT: PathKey[] = [
   { t: 0, p: [0, 0, 0], yaw: 0, ease: 'linear' },
-  { t: 0.2, p: [0, 0.07, 0], yaw: 0, ease: 'out' },
-  { t: 1.1, p: [0, 0.05, 0.6], yaw: 360, ease: 'inOut' },
+  { t: 0.2, p: [0, 0.07, 0], yaw: 0, ease: 'smooth' },
+  { t: 1.1, p: [0, 0.05, 0.6], yaw: 360, ease: 'smooth' },
   { t: 1.5, p: [0, 0.05, 0.6], yaw: 360, ease: 'linear' },
 ]
 
 export const RETURN: PathKey[] = [
   { t: 0, p: [0, 0.05, 0.6], yaw: 0, ease: 'linear' },
-  { t: 0.7, p: [0, 0.07, 0], yaw: 0, ease: 'inOut' },
-  { t: 0.85, p: [0, 0, 0], yaw: 0, ease: 'in' },
+  { t: 0.7, p: [0, 0.07, 0], yaw: 0, ease: 'smooth' },
+  { t: 0.85, p: [0, 0, 0], yaw: 0, ease: 'smooth' },
   { t: 1.25, p: [0, 0, 0], yaw: 0, ease: 'linear' },
 ]
 
@@ -37,6 +38,8 @@ export function ease(kind: Ease, x: number) {
       return t * t * t
     case 'out':
       return 1 - (1 - t) ** 3
+    case 'smooth':
+      return t * t * (3 - 2 * t)
     case 'inOut':
       return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2
     default:
@@ -76,3 +79,35 @@ export function travel(keys: PathKey[], t: number) {
   const total = Math.abs(end[2] - start[2])
   return total > 0 ? Math.abs(now[2] - start[2]) / total : t >= pathDuration(keys) ? 1 : 0
 }
+
+// ---- baked cloth clips ------------------------------------------------------
+// tee_anim.glb carries 66 morph targets (Sample_01..66), one per 24 fps frame:
+// lift frames 1..36 → targets 0..35, return frames 1..30 → targets 36..65.
+// Lift frame 0 is the base mesh; return frame 0 is the last lift sample (target 35).
+
+export type ClipName = 'lift' | 'return' | 'hold'
+export const CLIP_FPS = 24
+export const LIFT_FRAMES = 36
+export const RETURN_FRAMES = 30
+export const LIFT_END_TARGET = LIFT_FRAMES - 1
+
+export interface MorphBlend {
+  /** Morph target index for the lower frame, or -1 for the base mesh. */
+  a: number
+  /** Morph target index for the upper frame, or -1 for the base mesh. */
+  b: number
+  /** Weight of `b`; `a` gets 1 - w. */
+  w: number
+}
+
+export function clipMorph(name: ClipName, t: number): MorphBlend {
+  if (name === 'hold') return { a: LIFT_END_TARGET, b: LIFT_END_TARGET, w: 0 }
+  const frames = name === 'lift' ? LIFT_FRAMES : RETURN_FRAMES
+  const target = (f: number) => (name === 'lift' ? f - 1 : LIFT_END_TARGET + f)
+  const u = Math.min(Math.max(t * CLIP_FPS, 0), frames)
+  const f0 = Math.min(Math.floor(u), frames - 1)
+  return { a: target(f0), b: target(f0 + 1), w: u - f0 }
+}
+
+export const clipDuration = (name: ClipName) =>
+  name === 'lift' ? LIFT_FRAMES / CLIP_FPS : name === 'return' ? RETURN_FRAMES / CLIP_FPS : Infinity

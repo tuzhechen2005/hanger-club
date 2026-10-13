@@ -116,8 +116,8 @@ export function IndexSheet({ onPick }: { onPick: (index: number) => void }) {
         <p>A good wardrobe starts with a few pieces you love wearing. Easy shapes, considered details, a little personality.</p>
       </div>
       <p className="note">
-        Interaction demo. Garments are placeholder 3D models; product photos belong to their respective brands and are used for a private
-        prototype only.
+        Interaction demo. One shared 3D tee drapes every piece; only the Wood Label Tee has a finished texture, the others use rough
+        print crops. Product photos belong to their respective brands and are used for a private prototype only.
       </p>
     </Sheet>
   )

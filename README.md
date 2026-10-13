@@ -12,8 +12,11 @@
 npm install
 npm run dev        # http://localhost:5173
 npm test           # 单元测试（购物袋、弹簧、手势、路径）
-npm run build      # 类型检查 + 构建到 dist/
+npm run build      # 类型检查 + 构建到 dist/（会去掉网页用不到的原始 GLB 和 PNG 贴图）
+npm run models     # Blender 导出更新后，重新生成网页用的压缩模型 public/models/web/
 ```
+
+Blender 资产管线见 `tools/blender/README.md`，资产规格见 `docs/asset-spec.md`。
 
 `dist/` 是构建产物（已 gitignore），对应 `.openai/hosting.json` 的静态目录。发布到 Sites 前先 `npm run build`。
 
@@ -29,8 +32,10 @@ src/
   motion/spring.ts    固定子步长弹簧与钟摆积分
   motion/gesture.ts   方向锁定、橡皮筋边界、松手目标、速度估计
   scene/RackScene.tsx Three.js 场景（React Three Fiber），按需渲染
-  scene/geometry.ts   占位 T 恤与衣架几何体
-  scene/materials.ts  布料材质（顶点着色器做衣摆滞后与转身外甩）与占位贴图
+  scene/models.ts     加载 Blender 模型：先静态 tee.glb，再后台加载带布料动画的 tee_anim.glb
+  scene/geometry.ts   模型加载完成前显示的程序化占位 T 恤与衣架
+  scene/materials.ts  布料材质（顶点着色器做衣摆滞后与转身外甩）与商品贴图
+  scene/uvLayout.ts   读取 Blender 导出的 UV 布局，用于按实际尺寸放置印花
   scene/framing.ts    手机/桌面镜头取景
   ui/                 购物袋、INDEX 面板、SVG 缩略图
 docs/asset-spec.md    Blender 资产与网页之间的契约
@@ -41,9 +46,13 @@ assets-src/photos/    商品照片（LFS）
 
 ## 现状与已知限制
 
-- **衣服是占位模型。** 由代码生成的"枕头形"T 恤加简单褶皱，不是布料模拟。印花是从照片里粗略抠出来的占位贴图。真实网格与烘焙动画由 Blender 管线制作（见 `docs/`），交付后替换。
-- 衣摆滞后、转身外甩、钟摆摆动都是实时近似，不是真实布料物理；烘焙的 `lift` / `return` 形变动画尚未接入。
-- 近看时邻居衣服是滑出画面，没有做视频里的景深模糊。
-- 没有 WebGL 时退化为平面 SVG 展示，尺码和购物袋仍可用。
-- 已在桌面 Chrome（无头模式，含模拟触摸）上验证 390、768、1440 宽度；尚未在真机 iOS Safari / Android 上测试，也没有测帧率。
-- **授权：** 商品照片是第三方品牌（Fear of God / Essentials、NBA、MLB）的商品图，仅用于私有演示。公开上线或卖货前必须全部替换。不接真实支付。
+- **衣服模型**：来自 Blender 管线，6 款共用同一件 T 恤的网格。网页先加载 458 KB 的静态模型；带 66 帧布料形变的动画模型（2.2 MB）在后台加载，加载好后，取下和挂回会播放烘焙的布料动画。模型加载前、或者加载失败时，显示代码生成的占位 T 恤。
+- **商品贴图**：只有 shirt3（Wood Label Tee）用的是管线做好的贴图，其余 5 款是浏览器里用照片粗略抠出的印花拼成的，仍是占位。
+- **动态**：
+  - 取下和挂回播放烘焙布料动画。
+  - 衣架摆动、近看时的旋转和换款，用的是实时近似（钟摆 + 顶点着色器），不是布料模拟。
+- **模型已知问题**：见 `docs/blender-research.md`。领口一侧有小尖角；侧面看袖子下半段明显向前伸出（约 19 cm）。在衣架上侧着排列的邻居衣服会露出这个问题，需要回 Blender 修。
+- **视觉**：近看时邻居衣服只是滑出画面，没有视频里的景深模糊。
+- **兼容性**：没有 WebGL、或者 3D 场景出错时，退化为平面 SVG 展示，尺码和购物袋仍可用。
+- **测试范围**：只在桌面 Chrome 无头模式（含模拟触摸）上测过 390、768、1440 三种宽度。没在真机 iOS Safari / Android 上测过，也没测帧率。
+- **授权**：商品照片是第三方品牌（Fear of God / Essentials、NBA、MLB）的商品图，仅用于私有演示。公开上线或卖货前必须全部替换。不接真实支付。

@@ -22,6 +22,8 @@ export interface Product {
   price: number
   silhouette: Silhouette
   fabric: string
+  /** Finished base color texture from the Blender pipeline (tools/blender/make_product_texture.py). */
+  basecolor?: string
   prints: { front?: PrintPlacement & { url: string }; back?: PrintPlacement & { url: string } }
 }
 
@@ -33,6 +35,12 @@ interface PlaceholderMeta {
 }
 
 const placeholders = import.meta.glob<PlaceholderMeta>('../../public/products/*/placeholder.json', {
+  eager: true,
+  import: 'default',
+})
+
+// Products the Blender pipeline has processed carry a product.json next to basecolor.png.
+const pipeline = import.meta.glob<{ basecolor: string; baseColorHex: string }>('../../public/products/*/product.json', {
   eager: true,
   import: 'default',
 })
@@ -53,7 +61,14 @@ export const products: Product[] = copy.map((item) => {
   const prints: Product['prints'] = {}
   if (meta?.print_front) prints.front = { ...meta.print_front, url: asset(`products/${item.id}/placeholder-print-front.png`) }
   if (meta?.print_back) prints.back = { ...meta.print_back, url: asset(`products/${item.id}/placeholder-print-back.png`) }
-  return { ...item, silhouette: 'tee', fabric: meta?.fabric ?? '#cfcac0', prints }
+  const finished = pipeline[`../../public/products/${item.id}/product.json`]
+  return {
+    ...item,
+    silhouette: 'tee',
+    fabric: finished?.baseColorHex ?? meta?.fabric ?? '#cfcac0',
+    basecolor: finished ? asset(`products/${item.id}/${finished.basecolor}`) : undefined,
+    prints,
+  }
 })
 
 export const productById = new Map(products.map((p) => [p.id, p]))

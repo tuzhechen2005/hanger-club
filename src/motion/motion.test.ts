@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { classifyAxis, releaseTarget, rubberBand, VelocityTracker } from './gesture'
-import { LIFT, RETURN, samplePath, travel } from './path'
+import { clipDuration, clipMorph, LIFT, RETURN, samplePath, travel } from './path'
 import { makeSpring, stepPendulum, stepSpring } from './spring'
 
 describe('spring', () => {
@@ -95,5 +95,31 @@ describe('paths', () => {
     expect(travel(LIFT, 1.5)).toBe(1)
     expect(travel(RETURN, 0)).toBe(0)
     expect(travel(RETURN, 1.25)).toBe(1)
+  })
+})
+
+describe('baked clip morphs', () => {
+  it('lift starts on the base mesh and ends on target 35', () => {
+    expect(clipMorph('lift', 0)).toEqual({ a: -1, b: 0, w: 0 })
+    const end = clipMorph('lift', 99)
+    expect(end.b).toBe(35)
+    expect(end.w).toBe(1)
+  })
+
+  it('blends neighbouring frames', () => {
+    const m = clipMorph('lift', 10.5 / 24)
+    expect(m).toEqual({ a: 9, b: 10, w: 0.5 })
+  })
+
+  it('return continues from the lift end and finishes on target 65', () => {
+    expect(clipMorph('return', 0)).toEqual({ a: 35, b: 36, w: 0 })
+    const end = clipMorph('return', 99)
+    expect(end.b).toBe(65)
+    expect(end.w).toBe(1)
+  })
+
+  it('durations match the bake', () => {
+    expect(clipDuration('lift')).toBe(1.5)
+    expect(clipDuration('return')).toBe(1.25)
   })
 })

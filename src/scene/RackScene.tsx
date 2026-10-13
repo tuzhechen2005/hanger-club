@@ -6,20 +6,23 @@ import { products } from '../data/products'
 import { rig } from '../motion/rig'
 import { computeFraming, FOV } from './framing'
 import { createHangerGeometry, createTeeGeometry } from './geometry'
-import { createClothMaterial, createGarmentTexture, type ClothUniforms } from './materials'
+import { createFabricMaterials, createGarmentTexture, patchCloth, type ClothUniforms } from './materials'
+import { useGarmentModel, type GarmentModel } from './models'
+import type { Product } from '../data/products'
 
 interface GarmentRefs {
   slot: THREE.Group
   swing: THREE.Group
   spin: THREE.Group
   body: THREE.Group
-  mesh: THREE.Mesh
-  uniforms: ClothUniforms
+  /** Cloth meshes: picked by the raycaster, driven by baked morphs. */
+  meshes: THREE.Mesh[]
+  uniforms: ClothUniforms[]
 }
 
 const registry: GarmentRefs[] = []
 
-function useSharedAssets() {
+function usePlaceholderAssets() {
   return useMemo(() => {
     const tee = createTeeGeometry()
     const hanger = createHangerGeometry()
@@ -28,38 +31,84 @@ function useSharedAssets() {
     return { tee, hanger, wood, metal }
   }, [])
 }
+type PlaceholderAssets = ReturnType<typeof usePlaceholderAssets>
 
-function Garment({ index, assets }: { index: number; assets: ReturnType<typeof useSharedAssets> }) {
+interface GarmentParts {
+  hook: THREE.Object3D
+  wood: THREE.Object3D
+  cloth: THREE.Object3D
+  meshes: THREE.Mesh[]
+  uniforms: ClothUniforms[]
+  materials: THREE.Material[]
+}
+
+/** The Blender garment for one product: shared geometry and maps, its own base color. */
+function fromModel(model: GarmentModel, product: Product, map: THREE.Texture): GarmentParts {
+  const cloth = model.garment.clone(true)
+  const meshes: THREE.Mesh[] = []
+  cloth.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh)
+  })
+  const sources = meshes.map((m) => m.material as THREE.MeshStandardMaterial)
+  const { outer, inner } = createFabricMaterials(map, product, {
+    outer: sources.find((m) => m.name === 'Fabric'),
+    inner: sources.find((m) => m.name === 'FabricInner'),
+  })
+  cloth.updateMatrix()
+  const uniforms = meshes.map((mesh) => {
+    const isInner = (mesh.material as THREE.Material).name === 'FabricInner'
+    mesh.material = isInner ? inner : outer
+    mesh.updateMatrix()
+    const toPivot = mesh === cloth ? cloth.matrix.clone() : cloth.matrix.clone().multiply(mesh.matrix)
+    return patchCloth(mesh.material as THREE.Material, toPivot)
+  })
+  return { hook: model.hook.clone(), wood: model.wood.clone(), cloth, meshes, uniforms, materials: [outer, inner] }
+}
+
+function fromPlaceholder(assets: PlaceholderAssets, product: Product, map: THREE.Texture): GarmentParts {
+  const { outer } = createFabricMaterials(map, product)
+  const cloth = new THREE.Mesh(assets.tee, outer)
+  return {
+    hook: new THREE.Mesh(assets.hanger.hook, assets.metal),
+    wood: new THREE.Mesh(assets.hanger.wood, assets.wood),
+    cloth,
+    meshes: [cloth],
+    uniforms: [patchCloth(outer)],
+    materials: [outer],
+  }
+}
+
+function Garment({ index, placeholder, model }: { index: number; placeholder: PlaceholderAssets; model: GarmentModel | null }) {
   const invalidate = useThree((s) => s.invalidate)
   const product = products[index]
-  const { material, uniforms } = useMemo(() => {
-    const texture = createGarmentTexture(product, () => rig.invalidate())
-    return createClothMaterial(texture, product.fabric)
-  }, [product])
+  const map = useMemo(() => createGarmentTexture(product, () => rig.invalidate()), [product])
+  const parts = useMemo(
+    () => (model ? fromModel(model, product, map) : fromPlaceholder(placeholder, product, map)),
+    [model, placeholder, product, map],
+  )
   const slot = useRef<THREE.Group>(null!)
   const swing = useRef<THREE.Group>(null!)
   const spin = useRef<THREE.Group>(null!)
   const body = useRef<THREE.Group>(null!)
-  const mesh = useRef<THREE.Mesh>(null!)
 
   useEffect(() => {
-    mesh.current.userData.index = index
-    registry[index] = { slot: slot.current, swing: swing.current, spin: spin.current, body: body.current, mesh: mesh.current, uniforms }
+    for (const part of [parts.hook, parts.wood, parts.cloth]) part.traverse((o) => (o.castShadow = true))
+    for (const mesh of parts.meshes) mesh.userData.index = index
+    registry[index] = { slot: slot.current, swing: swing.current, spin: spin.current, body: body.current, meshes: parts.meshes, uniforms: parts.uniforms }
     invalidate()
-    return () => {
-      material.map?.dispose()
-      material.dispose()
-    }
-  }, [index, material, uniforms, invalidate])
+    return () => parts.materials.forEach((m) => m.dispose())
+  }, [index, parts, invalidate])
+
+  useEffect(() => () => map.dispose(), [map])
 
   return (
     <group ref={slot}>
       <group ref={swing}>
         <group ref={spin}>
-          <mesh geometry={assets.hanger.hook} material={assets.metal} castShadow />
+          <primitive object={parts.hook} />
           <group ref={body}>
-            <mesh geometry={assets.hanger.wood} material={assets.wood} castShadow />
-            <mesh ref={mesh} geometry={assets.tee} material={material} castShadow />
+            <primitive object={parts.wood} />
+            <primitive object={parts.cloth} />
           </group>
         </group>
       </group>
@@ -76,7 +125,7 @@ function Driver({ rail, wall }: { rail: React.RefObject<THREE.Mesh | null>; wall
       const rect = gl.domElement.getBoundingClientRect()
       const ndc = new THREE.Vector2(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1)
       raycaster.setFromCamera(ndc, camera)
-      const hits = raycaster.intersectObjects(registry.filter(Boolean).map((g) => g.mesh), false)
+      const hits = raycaster.intersectObjects(registry.filter(Boolean).flatMap((g) => g.meshes), false)
       return hits.length ? (hits[0].object.userData.index as number) : null
     }
     invalidate()
@@ -108,9 +157,20 @@ function Driver({ rail, wall }: { rail: React.RefObject<THREE.Mesh | null>; wall
       g.swing.rotation.set(p.swingX, 0, p.swingZ)
       g.spin.rotation.y = p.spin
       g.body.rotation.y = p.rackYaw
-      g.uniforms.uBend.value.set(p.bendX, p.bendZ)
-      g.uniforms.uFlare.value = p.flare
-      g.uniforms.uTwist.value = p.twist
+      for (const u of g.uniforms) {
+        u.uBend.value.set(p.bendX, p.bendZ)
+        u.uFlare.value = p.flare
+        u.uTwist.value = p.twist
+      }
+      const morph = rig.morph(i)
+      for (const mesh of g.meshes) {
+        const influences = mesh.morphTargetInfluences
+        if (!influences) continue
+        influences.fill(0)
+        if (!morph) continue
+        if (morph.a >= 0) influences[morph.a] += 1 - morph.w
+        if (morph.b >= 0) influences[morph.b] += morph.w
+      }
     })
     if (rail.current) {
       const m = rail.current.material as THREE.MeshStandardMaterial
@@ -138,7 +198,12 @@ function Environment() {
 }
 
 function SceneContent() {
-  const assets = useSharedAssets()
+  const placeholder = usePlaceholderAssets()
+  const model = useGarmentModel()
+  useEffect(() => {
+    rig.bakedClips = !!model?.animated
+    rig.invalidate()
+  }, [model])
   const rail = useRef<THREE.Mesh>(null)
   const wall = useRef<THREE.Mesh>(null)
   const mobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches
@@ -171,7 +236,7 @@ function SceneContent() {
         <shadowMaterial opacity={0.1} />
       </mesh>
       {products.map((p, i) => (
-        <Garment key={p.id} index={i} assets={assets} />
+        <Garment key={p.id} index={i} placeholder={placeholder} model={model} />
       ))}
     </>
   )
