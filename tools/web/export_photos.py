@@ -1,6 +1,8 @@
 """Export the product photos in assets-src/photos for the "original photo" proof in the page.
 
-Writes public/products/<slug>/photo-<side>.webp (longest edge 1000 px). The photos are third-party
+Writes public/products/<slug>/photo-<side>.webp: the studio sweep is keyed out to white and the
+garment is cropped and centred on a 900 px square at the same scale for every product, so the
+photos line up on the page (where they are multiplied into the paper colour). The photos are third-party
 brand images for the private demo only (docs/asset-spec.md §5); replace them before any launch.
 
     python tools/web/export_photos.py
@@ -8,10 +10,36 @@ brand images for the private demo only (docs/asset-spec.md §5); replace them be
 
 from pathlib import Path
 
-from PIL import Image
+import numpy as np
+from PIL import Image, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "assets-src" / "photos"
+
+
+SIZE = 900
+FILL = 0.86
+
+
+def normalise(image):
+    """Key out the background (sampled from the corners) and centre the garment."""
+    pixels = np.asarray(image).astype(np.float32)
+    h, w, _ = pixels.shape
+    k = max(4, min(h, w) // 40)
+    corners = np.concatenate([pixels[:k, :k], pixels[:k, -k:], pixels[-k:, :k], pixels[-k:, -k:]]).reshape(-1, 3)
+    background = np.median(corners, axis=0)
+    distance = np.linalg.norm(pixels - background, axis=2)
+    # Soft key: fully background below 10, fully garment above 34 (8-bit units).
+    alpha = np.clip((distance - 10) / 24, 0, 1)
+    mask = Image.fromarray((alpha * 255).astype(np.uint8)).filter(ImageFilter.MedianFilter(5))
+    box = mask.point(lambda v: 255 if v > 128 else 0).getbbox() or (0, 0, w, h)
+    white = Image.new("RGB", (w, h), (255, 255, 255))
+    keyed = Image.composite(image, white, mask).crop(box)
+    scale = SIZE * FILL / max(keyed.size)
+    keyed = keyed.resize((round(keyed.width * scale), round(keyed.height * scale)), Image.LANCZOS)
+    out = Image.new("RGB", (SIZE, SIZE), (255, 255, 255))
+    out.paste(keyed, ((SIZE - keyed.width) // 2, (SIZE - keyed.height) // 2))
+    return out
 
 
 def main():
@@ -21,8 +49,7 @@ def main():
         slug, side = path.stem.split("-", 1)
         if side not in {"front", "back"}:
             continue
-        image = Image.open(path).convert("RGB")
-        image.thumbnail((1000, 1000), Image.LANCZOS)
+        image = normalise(Image.open(path).convert("RGB"))
         out = ROOT / "public" / "products" / slug / f"photo-{side}.webp"
         out.parent.mkdir(parents=True, exist_ok=True)
         image.save(out, "WEBP", quality=82, method=6)

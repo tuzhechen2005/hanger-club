@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { productById, products } from '../data/products'
 import { useUI, type Sheet as SheetName } from '../state/store'
-import { TeeThumb } from './TeeThumb'
 
 function Sheet({ name, label, children }: { name: Exclude<SheetName, null>; label: string; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -62,7 +61,7 @@ export function BagSheet() {
           <ul className="bag-lines">
             {lines.map(({ line, product }) => (
               <li key={`${line.productId}-${line.size}`}>
-                <TeeThumb product={product} className="bag-thumb" />
+                <img className="bag-thumb" src={product.photos[0].url} alt="" />
                 <div className="bag-text">
                   <strong>{product.name}</strong>
                   <small>
@@ -103,7 +102,9 @@ export function IndexSheet({ onPick }: { onPick: (index: number) => void }) {
   return (
     <Sheet name="index" label="The rail">
       <span className="eyebrow">Tonight on the rail</span>
-      <h2>Six pieces, hung by hand.</h2>
+      <h2>
+        Six pieces, <i>hung by hand.</i>
+      </h2>
       <ol className="index-list">
         {products.map((p, i) => (
           <li key={p.id}>
@@ -113,10 +114,16 @@ export function IndexSheet({ onPick }: { onPick: (index: number) => void }) {
                 onPick(i)
               }}
             >
-              <TeeThumb product={p} className="index-thumb" />
-              <span className="index-no">Nº {String(i + 1).padStart(2, '0')}</span>
+              <span className="index-photo">
+                <img src={p.photos[0].url} alt="" loading="lazy" />
+              </span>
+              <span className="index-tear" aria-hidden="true" />
+              <span className="index-meta">
+                <span>Nº {String(i + 1).padStart(2, '0')}</span>
+                <em>${p.price}</em>
+              </span>
               <strong>{p.name}</strong>
-              <em>${p.price}</em>
+              <small>{p.category}</small>
             </button>
           </li>
         ))}
