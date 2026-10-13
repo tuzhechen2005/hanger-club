@@ -16,8 +16,8 @@ from build_hanger import build as build_hanger
 import numpy as np
 from mathutils.bvhtree import BVHTree
 
-DEFAULTS = dict(length_m=.70, chest_flat_m=.62, shoulder_m=.60,
-                sleeve_m=.24, sleeve_opening_m=.24, hem_flat_m=.61, rib_width_m=.025)
+DEFAULTS = dict(length_m=.76, chest_flat_m=.60, shoulder_m=.58,
+                sleeve_m=.26, sleeve_opening_m=.23, hem_flat_m=.59, rib_width_m=.025)
 
 
 class PatternAssembly:

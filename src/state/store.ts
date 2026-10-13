@@ -3,7 +3,7 @@ import { productById, type Size } from '../data/products'
 import { addLine, loadBag, saveBag, setQty, type BagLine } from './bag'
 
 export type Mode = 'browse' | 'lifting' | 'inspect' | 'switching' | 'returning'
-export type Sheet = 'bag' | 'index' | null
+export type Sheet = 'bag' | 'index' | 'photo' | null
 
 const storage = (() => {
   try {

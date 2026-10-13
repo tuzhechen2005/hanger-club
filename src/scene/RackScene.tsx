@@ -22,6 +22,8 @@ interface GarmentRefs {
 }
 
 const registry: GarmentRefs[] = []
+let cssRail = ''
+let cssLift = ''
 
 function usePlaceholderAssets() {
   return useMemo(() => {
@@ -190,8 +192,18 @@ function Driver({ rail, wall, sim, onSlow }: { rail: React.RefObject<THREE.Mesh 
     const moving = rig.step(dt)
     const b = rig.blend
     const { browse, inspect } = framing
-    camera.position.set(0, browse.cameraY + (inspect.cameraY - browse.cameraY) * b, browse.cameraZ + (inspect.cameraZ - browse.cameraZ) * b)
-    camera.lookAt(0, camera.position.y, 0)
+    const cx = browse.cameraX + (inspect.cameraX - browse.cameraX) * b
+    camera.position.set(cx, browse.cameraY + (inspect.cameraY - browse.cameraY) * b, browse.cameraZ + (inspect.cameraZ - browse.cameraZ) * b)
+    camera.lookAt(cx, camera.position.y, 0)
+    // The page's backdrop (giant numerals) slides with the rail and fades in the close-up.
+    const railPos = rig.pos.x.toFixed(3)
+    const lift = b.toFixed(3)
+    if (railPos !== cssRail || lift !== cssLift) {
+      document.documentElement.style.setProperty('--rail', railPos)
+      document.documentElement.style.setProperty('--lift', lift)
+      cssRail = railPos
+      cssLift = lift
+    }
 
     registry.forEach((g, i) => {
       if (!g) return
@@ -273,10 +285,15 @@ function SceneContent() {
     <>
       <Driver rail={rail} wall={wall} sim={sim} onSlow={() => setCoarse(true)} />
       <Environment />
-      <hemisphereLight args={['#fffdf6', '#c9c2b4', 0.7]} />
+      {/* Studio three-point light: warm key from front left, cool fill, a rim from behind
+          that separates the garments from the backdrop and shows their volume. */}
+      <hemisphereLight args={['#fff6e8', '#b9b2a6', 0.55]} />
+      <directionalLight position={[2.4, 1.2, 2.6]} intensity={0.35} color="#dfe6ff" />
+      <directionalLight position={[1.2, 1.8, -3]} intensity={1.1} color="#fff1dc" />
       <directionalLight
-        position={[-0.7, 2.2, 4.5]}
-        intensity={1.5}
+        position={[-1.4, 2.4, 4.2]}
+        intensity={1.7}
+        color="#fff4e4"
         castShadow
         shadow-mapSize={mobile ? [1024, 1024] : [2048, 2048]}
         shadow-camera-left={-3}
@@ -291,7 +308,7 @@ function SceneContent() {
       />
       <mesh ref={rail} position={[0, -0.011, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.011, 0.011, 40, 20]} />
-        <meshStandardMaterial color="#c8c8c2" metalness={1} roughness={0.25} transparent />
+        <meshStandardMaterial color="#c9a46a" metalness={1} roughness={0.3} transparent />
       </mesh>
       <mesh ref={wall} position={[0, -1.5, -0.2]} receiveShadow>
         <planeGeometry args={[40, 6]} />

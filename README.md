@@ -1,6 +1,13 @@
 # Hanger Club
 
-可交互衣架式服装展示网站（私有演示）。拖动横杆浏览，点一下把衣服从横杆上取下近看，拖动旋转，左右换款，下拉或 CLOSE 挂回去。
+可交互衣架式服装展示网站（私有演示）。拖动横杆浏览，点一下把衣服从横杆上取下近看，拖动旋转，左右换款，下拉或 Hang it back 挂回去。
+
+视觉概念是"Cloakroom Nº 1"：俱乐部的衣帽间。
+
+- 聚光灯下的黄铜横杆，墙面颜色跟随当前这件衣服变化，背后是随拖动视差滑过的巨大编号。
+- 每件衣服配一张打孔寄存牌，近看时是一张规格牌，选尺码时显示实际尺寸。
+- 购物袋叫"Claim"，打开是一张热敏纸收据。
+- 规格牌后面别着一张商品原图的拍立得照片，只露出一角，点开可以看原图。
 
 目标体验参考 Motionary 的 clothing-rack 手机演示。最初的 SVG 原型保留在 `legacy-svg/`，交接背景见 `开发交接文档.md`。
 
@@ -44,6 +51,7 @@ src/
 docs/asset-spec.md    Blender 资产与网页之间的契约
 docs/cloth-motion.md  衣服动态方法论：三层分工、接入步骤、参数、调参与验收
 tools/web/cloth-check.mjs  布料动态验收测量
+tools/web/export_photos.py 把 assets-src/photos 导出为近看页的原图（public/products/<slug>/photo-*.webp）
 docs/codex-blender-prompt.md  给 Codex 的建模任务
 tools/web/extract_placeholders.py  从商品照片生成占位印花
 assets-src/photos/    商品照片（LFS）

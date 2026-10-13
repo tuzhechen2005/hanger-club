@@ -1,8 +1,8 @@
-import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { products, SIZES } from './data/products'
+import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { MEASUREMENTS, products, SIZES } from './data/products'
 import { rig } from './motion/rig'
 import { useUI } from './state/store'
-import { BagSheet, IndexSheet } from './ui/Sheets'
+import { BagSheet, IndexSheet, PhotoSheet } from './ui/Sheets'
 import { TeeThumb } from './ui/TeeThumb'
 
 const RackScene = lazy(() => import('./scene/RackScene'))
@@ -156,9 +156,21 @@ export default function App() {
   const browsing = mode === 'browse'
   const inspecting = mode === 'inspect' || mode === 'switching'
   const number = (i: number) => String(i + 1).padStart(2, '0')
+  const fit = MEASUREMENTS[size]
 
   return (
-    <div className="app" data-mode={mode}>
+    <div className="app" data-mode={mode} style={{ '--tint': product.fabric } as CSSProperties}>
+      <div className="backdrop" aria-hidden="true">
+        <div className="spot" />
+        <div className="numerals">
+          {products.map((p, i) => (
+            <span key={p.id} style={{ '--i': i } as CSSProperties}>
+              {number(i)}
+            </span>
+          ))}
+        </div>
+      </div>
+
       {webgl ? (
         <SceneBoundary onError={() => setSceneFailed(true)}>
           <Stage />
@@ -168,39 +180,60 @@ export default function App() {
       )}
 
       <header className="topbar">
-        <button className="top-left" onClick={() => openSheet('index')} inert={!browsing} aria-hidden={!browsing}>
-          INDEX
-        </button>
-        <span className="wordmark">Hanger Club</span>
+        <span className="wordmark">
+          Hanger<b>Club</b>
+          <small>Cloakroom Nº 1</small>
+        </span>
         <div className="top-right">
-          <button className="bag-button" onClick={() => openSheet('bag')} inert={!browsing} aria-hidden={!browsing}>
-            BAG · {bagCount}
+          <button className="top-left" onClick={() => openSheet('index')} inert={!browsing} aria-hidden={!browsing}>
+            The rail
+          </button>
+          <button className="bag-button" onClick={() => openSheet('bag')} inert={!browsing} aria-hidden={!browsing} aria-label={`Your claim, ${bagCount} pieces`}>
+            <span className="claim-chip">Claim</span>
+            <span className="claim-count">{bagCount}</span>
           </button>
           <button className="close-button" onClick={() => controls.close()} inert={!inspecting} aria-hidden={!inspecting}>
-            CLOSE
+            Hang it back
           </button>
         </div>
       </header>
 
       <section className="rack-info" aria-live="polite" inert={!browsing}>
         <h1 className="sr-only">Hanger Club — an interactive clothing rail</h1>
-        <p className="rack-name">{product.name}</p>
-        <p className="rack-price">${product.price}</p>
-        <button ref={seeButton} className="see" onClick={() => controls.lift()}>
-          SEE THE PIECE
-        </button>
-        <div className="rail-keys">
-          <button aria-label="Previous piece" onClick={() => controls.go(-1)} disabled={index === 0}>
-            ←
+        <article className="ticket" key={index}>
+          <div className="ticket-stub">
+            <span>Nº</span>
+            <strong>{number(index)}</strong>
+          </div>
+          <div className="ticket-body">
+            <p className="rack-colour">{product.category}</p>
+            <p className="rack-name">{product.name}</p>
+            <p className="rack-price">${product.price}</p>
+          </div>
+          <button ref={seeButton} className="see" onClick={() => controls.lift()}>
+            Take it down
           </button>
-          <span>
-            {number(index)} / {number(products.length - 1)}
-          </span>
-          <button aria-label="Next piece" onClick={() => controls.go(1)} disabled={index === products.length - 1}>
-            →
-          </button>
-        </div>
+        </article>
+        <p className="rail-hint">Drag the rail · tap a piece to take it down</p>
       </section>
+
+      <nav className="rail-keys" aria-label="Pieces on the rail" inert={!browsing}>
+        <button className="step" aria-label="Previous piece" onClick={() => controls.go(-1)} disabled={index === 0}>
+          ←
+        </button>
+        <ol>
+          {products.map((p, i) => (
+            <li key={p.id}>
+              <button className={i === index ? 'tick current' : 'tick'} aria-label={p.name} aria-current={i === index} onClick={() => controls.select(i)}>
+                <span style={{ background: p.fabric }} />
+              </button>
+            </li>
+          ))}
+        </ol>
+        <button className="step" aria-label="Next piece" onClick={() => controls.go(1)} disabled={index === products.length - 1}>
+          →
+        </button>
+      </nav>
 
       <section className="detail" inert={!inspecting} aria-label={`${product.name} details`}>
         <button className="arrow prev" aria-label="Previous piece" onClick={() => controls.go(-1)} disabled={index === 0}>
@@ -209,49 +242,70 @@ export default function App() {
         <button className="arrow next" aria-label="Next piece" onClick={() => controls.go(1)} disabled={index === products.length - 1}>
           →
         </button>
-        <div className="detail-text">
-          <span className="detail-index">
-            {number(index)} / {number(products.length - 1)}
-          </span>
+        <div className="detail-card">
+          {/* The original studio photo, clipped behind the ticket like a proof print. */}
+          <button className="proof" key={`proof-${index}`} onClick={() => openSheet('photo')} aria-label={`See the original photo of ${product.name}`}>
+            <img src={product.photos[0].url} alt="" />
+            <span className="clip" aria-hidden="true" />
+          </button>
+          <div className="detail-text">
+          <div className="detail-head">
+            <span className="detail-index">
+              Nº {number(index)} <i>of</i> {number(products.length - 1)}
+            </span>
+            <span className="detail-colour">
+              <span className="swatch" style={{ background: product.fabric }} />
+              {product.category}
+            </span>
+          </div>
           <h2 ref={detailTitle} tabIndex={-1}>
             {product.name}
           </h2>
-          <p className="detail-desc">
-            ${product.price} · {product.description}
-          </p>
-          <div className="sizes" role="radiogroup" aria-label="Size">
-            {SIZES.map((s) => (
-              <button key={s} role="radio" aria-checked={s === size} className={s === size ? 'selected' : ''} onClick={() => setSize(s)}>
-                {s}
-              </button>
-            ))}
+          <p className="detail-desc">{product.description}</p>
+          <div className="size-row">
+            <div className="sizes" role="radiogroup" aria-label="Size">
+              {SIZES.map((s) => (
+                <button key={s} role="radio" aria-checked={s === size} className={s === size ? 'selected' : ''} onClick={() => setSize(s)}>
+                  {s}
+                </button>
+              ))}
+            </div>
+            <p className="fit" aria-live="polite">
+              <span>
+                Chest <b>{fit.chest}</b>
+              </span>
+              <span>
+                Length <b>{fit.length}</b>
+              </span>
+              <span>
+                Sleeve <b>{fit.sleeve}</b>
+              </span>
+              <small>cm, laid flat</small>
+            </p>
           </div>
           <button
             className="primary"
             onClick={() => {
               addToBag(product.id, size)
-              showToast(`${product.name} · ${size} added to your bag`)
+              showToast(`${product.name} · ${size} added to your claim`)
             }}
           >
-            ADD TO BAG — ${product.price}
+            <span>Claim it</span>
+            <span>${product.price}</span>
           </button>
-          <p className="hint">Drag to turn · pull down to put it back</p>
+          {toast && toastVisible && (
+            <span className="stamp" key={toast.id} aria-hidden="true">
+              Claimed
+            </span>
+          )}
+          <p className="hint">Drag to turn · pull down to hang it back · demo, no payment taken</p>
+          </div>
         </div>
       </section>
 
-      <div className="marquee" aria-hidden="true">
-        <div className="marquee-track">
-          {Array.from({ length: 2 }, (_, k) => (
-            <span key={k}>
-              SAMPLE COLLECTION · INTERACTION DEMO · NO PAYMENT COLLECTED · DRAG TO BROWSE · TAP TO LIFT · SAMPLE COLLECTION · INTERACTION DEMO ·
-              NO PAYMENT COLLECTED · DRAG TO BROWSE · TAP TO LIFT ·&nbsp;
-            </span>
-          ))}
-        </div>
-      </div>
-
       <BagSheet />
       <IndexSheet onPick={(i) => controls.select(i)} />
+      <PhotoSheet />
       <div className={`toast ${toastVisible ? 'show' : ''}`} role="status">
         {toast?.text}
       </div>

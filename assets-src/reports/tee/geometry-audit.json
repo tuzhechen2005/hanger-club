@@ -5,7 +5,7 @@
   "surface_crossing_pair_total": 0,
   "all_sampled_checks_pass": true,
   "method": "Sample all baked poses for hanger penetration and surface intersections.\n\nNearest signed surface distance checks vertices and triangle centroids. It is\nnot a proof that an unsampled continuous-time mesh never intersects. The self\ncheck uses BVH candidates followed by finite segment/triangle intersections;\ncoplanar contacts and adjacent triangles are deliberately excluded.\n",
-  "elapsed_seconds": 1.122,
+  "elapsed_seconds": 1.126,
   "frames": [
     {
       "sample": 0,

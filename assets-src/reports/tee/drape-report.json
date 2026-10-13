@@ -1,12 +1,12 @@
 {
   "blender_version": "5.2.2 LTS",
   "dimensions": {
-    "length_m": 0.7,
-    "chest_flat_m": 0.62,
-    "shoulder_m": 0.6,
-    "sleeve_m": 0.24,
-    "sleeve_opening_m": 0.24,
-    "hem_flat_m": 0.61,
+    "length_m": 0.76,
+    "chest_flat_m": 0.6,
+    "shoulder_m": 0.58,
+    "sleeve_m": 0.26,
+    "sleeve_opening_m": 0.23,
+    "hem_flat_m": 0.59,
     "rib_width_m": 0.025
   },
   "single_layer_vertices": 4446,
@@ -15,27 +15,27 @@
     "triangles": 17792,
     "bounds_blender_m": {
       "min": [
-        -0.4688089191913605,
-        -0.08164753764867783,
-        -0.7819223403930664
+        -0.45839205384254456,
+        -0.10587070882320404,
+        -0.8395131230354309
       ],
       "max": [
-        0.4804151952266693,
-        0.08372355997562408,
-        -0.0781686082482338
+        0.440751314163208,
+        0.04893309995532036,
+        -0.07800509035587311
       ]
     }
   },
   "pre_roll_frames": 287,
   "pre_roll_seconds": 11.958333333333334,
-  "last_frame_max_velocity_m_s": 0.05184018239378929,
+  "last_frame_max_velocity_m_s": 0.053673021495342255,
   "seam_method": "Five pattern pieces joined by matching boundary vertices before simulation",
   "welded_seam_references": 76,
   "topology_changes_after_simulation": "Only required fixed-topology Solidify 0.002 m; no remesh/subdivision/decimation",
   "crease_relaxation": {
     "relax_iterations": 1,
-    "max_vertex_shift_m": 0.007390869315713644,
-    "vertices_moved": 42
+    "max_vertex_shift_m": 0.007761179003864527,
+    "vertices_moved": 46
   },
   "cloth_settings": {
     "profile": "gravity",
@@ -45,7 +45,7 @@
     "physically_calibrated": false,
     "self_collision": true
   },
-  "elapsed_seconds": 43.91,
+  "elapsed_seconds": 42.452,
   "known_issues": [
     "Small pinned shoulder support patches stabilize contact; garment is not held purely by friction",
     "Material parameters are an artist-tuned medium cotton approximation, not a measured fabric calibration"

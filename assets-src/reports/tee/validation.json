@@ -55,7 +55,7 @@
         2048,
         2048
       ],
-      "bytes": 1290649
+      "bytes": 1160510
     },
     {
       "name": "tee_orm",
@@ -63,7 +63,7 @@
         2048,
         2048
       ],
-      "bytes": 2001487
+      "bytes": 2140331
     },
     {
       "name": "WoodGrain",
@@ -76,36 +76,36 @@
   ],
   "uv_orientation": {
     "front": {
-      "horizontal_uv_world_x_correlation": 0.998817361201816,
-      "vertical_uv_world_y_correlation": 0.999926263133245,
-      "mean_gltf_z_m": 0.01271145697683096
+      "horizontal_uv_world_x_correlation": 0.9994034190248307,
+      "vertical_uv_world_y_correlation": 0.9999722115152515,
+      "mean_gltf_z_m": 0.016897017136216164
     },
     "back": {
-      "horizontal_uv_world_x_correlation": -0.9985996730866993,
-      "vertical_uv_world_y_correlation": 0.9997894157156965,
-      "mean_gltf_z_m": -0.020893191918730736
+      "horizontal_uv_world_x_correlation": -0.9992064202426295,
+      "vertical_uv_world_y_correlation": 0.9999011445842831,
+      "mean_gltf_z_m": -0.018567167222499847
     }
   },
   "bounds_gltf_m": {
     "min": [
-      -0.4688180685043335,
-      -0.7819489240646362,
-      -0.08366668224334717
+      -0.4583906829357147,
+      -0.8395383954048157,
+      -0.04891547933220863
     ],
     "max": [
-      0.4804171323776245,
-      -0.0781327411532402,
-      0.0816308930516243
+      0.4407384693622589,
+      -0.07798929512500763,
+      0.10585455596446991
     ]
   },
   "files": {
     "tee.glb": {
-      "bytes": 3920800,
-      "sha256": "4049430101065064f39f809e31880e4c993ed9a8b4f78633f2b4e889a26616b1"
+      "bytes": 3929508,
+      "sha256": "f03fae60166543e988e365806b3a76761bee54931a07f8a3a07602c55130f76e"
     },
     "tee_anim.glb": {
-      "bytes": 18928252,
-      "sha256": "1920bb31973b4afbbc76bd419ae6be6b1c775acfcda7e8088dd55c77a87f0274"
+      "bytes": 18937040,
+      "sha256": "9802786740d5679bb364c436b61269494507cb486d09f02510d67ef3ae917280"
     }
   },
   "scope": "Structural GLB validation; collision, mirror correctness and visual quality require separate checks"

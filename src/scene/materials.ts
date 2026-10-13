@@ -93,6 +93,22 @@ if (uDispOn > 0.5) {
 }`,
         )
     }
+    if (lit) {
+      // Heather / melange knit: a fibre grain at fabric scale, so the jersey does not read as
+      // a flat plastic colour. Strength is per product (material.userData.heather).
+      shader.uniforms.uHeather = { value: heatherTexture() }
+      shader.uniforms.uHeatherAmount = { value: (material.userData.heather as number | undefined) ?? 0 }
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform sampler2D uHeather;\nuniform float uHeatherAmount;')
+        .replace(
+          '#include <map_fragment>',
+          `#include <map_fragment>
+#ifdef USE_MAP
+float grain = texture2D(uHeather, vMapUv * 7.0).r;
+diffuseColor.rgb *= 1.0 + (grain - 0.5) * uHeatherAmount;
+#endif`,
+        )
+    }
     // A single-sheet placeholder shows its inside through the neck: darken back faces.
     if (lit && material.side === THREE.DoubleSide) {
       shader.fragmentShader = shader.fragmentShader.replace(
@@ -102,7 +118,7 @@ if (!gl_FrontFacing) diffuseColor.rgb *= 0.5;`,
       )
     }
   }
-  material.customProgramCacheKey = () => `cloth-v5-${lit ? 'lit' : 'depth'}-${material.side}`
+  material.customProgramCacheKey = () => `cloth-v6-${lit ? 'lit' : 'depth'}-${material.side}`
 }
 
 /** Shadow-casting material that follows the same cloth offsets as the visible one. */
@@ -110,6 +126,44 @@ export function clothDepthMaterial(uniforms: ClothUniforms) {
   const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking })
   patchCloth(depth, uniforms)
   return depth
+}
+
+let heather: THREE.Texture | null = null
+/** Tiling fibre grain (about 20 cm per tile): speckle plus short light and dark fibres. */
+function heatherTexture() {
+  if (heather) return heather
+  const size = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = canvas.height = size
+  const g = canvas.getContext('2d')!
+  const img = g.createImageData(size, size)
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 128 + (Math.random() - 0.5) * 60
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v
+    img.data[i + 3] = 255
+  }
+  g.putImageData(img, 0, 0)
+  g.lineCap = 'round'
+  for (let k = 0; k < 2200; k++) {
+    const x = Math.random() * size
+    const y = Math.random() * size
+    const length = 2 + Math.random() * 5
+    const angle = (Math.random() - 0.5) * 0.6
+    const light = Math.random() < 0.5
+    g.strokeStyle = light ? `rgba(255,255,255,${0.25 + Math.random() * 0.35})` : `rgba(0,0,0,${0.2 + Math.random() * 0.3})`
+    g.lineWidth = 0.8 + Math.random() * 0.8
+    for (const [ox, oy] of [[0, 0], [-size, 0], [size, 0], [0, -size], [0, size]]) {
+      g.beginPath()
+      g.moveTo(x + ox, y + oy)
+      g.lineTo(x + ox + Math.cos(angle) * length, y + oy + Math.sin(angle) * length)
+      g.stroke()
+    }
+  }
+  heather = new THREE.CanvasTexture(canvas)
+  heather.wrapS = heather.wrapT = THREE.RepeatWrapping
+  heather.colorSpace = THREE.NoColorSpace
+  heather.anisotropy = 4
+  return heather
 }
 
 function fabricMaterial(map: THREE.Texture, fabric: string, inner: boolean, source?: THREE.MeshStandardMaterial) {
@@ -133,10 +187,10 @@ function fabricMaterial(map: THREE.Texture, fabric: string, inner: boolean, sour
 
 /** Outer + inner fabric for one product, sharing the GLB's normal/ORM maps when given. */
 export function createFabricMaterials(map: THREE.Texture, product: Product, source?: { outer?: THREE.MeshStandardMaterial; inner?: THREE.MeshStandardMaterial }) {
-  return {
-    outer: fabricMaterial(map, product.fabric, false, source?.outer),
-    inner: fabricMaterial(map, product.fabric, true, source?.inner ?? source?.outer),
-  }
+  const outer = fabricMaterial(map, product.fabric, false, source?.outer)
+  const inner = fabricMaterial(map, product.fabric, true, source?.inner ?? source?.outer)
+  outer.userData.heather = inner.userData.heather = product.heather
+  return { outer, inner }
 }
 
 const SIZE = 1024
