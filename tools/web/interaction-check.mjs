@@ -8,6 +8,8 @@
 //
 // Some checks name products by their place on the rail (src/data/products.ts): update them
 // when the rail order changes. Exits 1 if any check fails or the page throws.
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { chromium } from 'playwright-core'
 
 const url = process.argv[2] ?? 'http://127.0.0.1:5173/'
@@ -133,7 +135,7 @@ const dismissPhoto = async (page) => {
   const lines = await page.locator('.bag-lines li').count()
   const qty = await page.textContent('.qty span')
   check('bag merged and persisted', lines === 1 && qty === '2', `lines=${lines} qty=${qty}`)
-  await page.screenshot({ path: new URL('./shots/bag.png', import.meta.url).pathname })
+  await page.screenshot({ path: join(tmpdir(), 'hanger-club-bag.png') })
   await page.click('.qty button[aria-label="Decrease quantity"]')
   await page.click('.qty button[aria-label="Decrease quantity"]')
   check('empty bag message', (await page.locator('.empty').count()) === 1)
